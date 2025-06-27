@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36212.18 d17.14
+VisualStudioVersion = 17.14.36212.18
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShowTime", "ShowTime\ShowTime\ShowTime.csproj", "{F26F089D-5A88-4228-AD4C-9490673518E3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShowTime.Client", "ShowTime\ShowTime.Client\ShowTime.Client.csproj", "{34CDAA9E-CE99-420D-BA8F-0EBF1A319B44}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShowTime.DataAccess", "ShowTimeDataAccess\ShowTime.DataAccess.csproj", "{6ECD2E68-0303-4EF8-B3BE-81140C4F02D3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{34CDAA9E-CE99-420D-BA8F-0EBF1A319B44}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{34CDAA9E-CE99-420D-BA8F-0EBF1A319B44}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{34CDAA9E-CE99-420D-BA8F-0EBF1A319B44}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6ECD2E68-0303-4EF8-B3BE-81140C4F02D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6ECD2E68-0303-4EF8-B3BE-81140C4F02D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6ECD2E68-0303-4EF8-B3BE-81140C4F02D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6ECD2E68-0303-4EF8-B3BE-81140C4F02D3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
