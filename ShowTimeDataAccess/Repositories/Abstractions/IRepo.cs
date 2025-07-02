@@ -8,10 +8,10 @@ namespace ShowTime.DataAccess.Repositories.Abstractions
 {
     public interface IRepo<T> where T : class
     {
-        Task Add(T entity); 
-        Task Update(T entity);
-        Task Delete(T entity);
-        Task<T?> GetById(int id);
-        Task<IEnumerable<T>> GetAll();
+        Task AddAsync(T entity); 
+        Task UpdateAsync(T entity);
+        Task DeleteAsync(int id);
+        Task<T?> GetByIdAsync(int id);
+        Task<IEnumerable<T>> GetAllAsync();
     }
 }

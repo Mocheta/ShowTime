@@ -49,3 +49,59 @@ h1:focus {
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
 }
+.artists-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    justify-items: center;
+}
+
+.artist-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    width: 300px;
+}
+
+.artist-image-container {
+    position: relative;
+    width: 300px;
+    height: 200px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.artist-image {
+    width: 300px;
+    height: 200px;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+
+.artist-name-overlay {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    text-align: right;
+}
+
+.artist-name {
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin-bottom: 5px;
+}
+
+.artist-genre {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    font-weight: normal;
+}
+
+.artist-actions {
+    padding: 15px;
+    text-align: center;
+}

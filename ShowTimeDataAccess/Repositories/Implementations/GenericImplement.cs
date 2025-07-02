@@ -15,7 +15,7 @@ namespace ShowTime.DataAccess.Repositories.Implementations
             _context = context; 
         }
 
-        public virtual async Task Add(T entity)
+        public virtual async Task AddAsync(T entity)
         {
             try
             {
@@ -44,15 +44,15 @@ namespace ShowTime.DataAccess.Repositories.Implementations
             }
         }
 
-        public virtual async Task Delete(T entity)
+        public virtual async Task DeleteAsync(int id)
         {
             try
             {
+                var entity = await _context.Set<T>().FindAsync(id);
                 if (entity == null)
                 {
-                    throw new ArgumentNullException(nameof(entity), "Entity cannot be null");
+                    throw new KeyNotFoundException($"Entity with ID {id} not found");
                 }
-
                 _context.Set<T>().Remove(entity);
                 await _context.SaveChangesAsync();
             }
@@ -74,7 +74,7 @@ namespace ShowTime.DataAccess.Repositories.Implementations
         }
 
 
-        public virtual async Task<IEnumerable<T>> GetAll()
+        public virtual async Task<IEnumerable<T>> GetAllAsync()
         {
             try
             {
@@ -93,7 +93,7 @@ namespace ShowTime.DataAccess.Repositories.Implementations
 
         }
 
-        public virtual async Task<T?> GetById(int id)
+        public virtual async Task<T?> GetByIdAsync(int id)
         {
             try
             {
@@ -121,7 +121,7 @@ namespace ShowTime.DataAccess.Repositories.Implementations
             }
         }
 
-        public virtual async Task Update(T entity)
+        public virtual async Task UpdateAsync(T entity)
         {
             try
             {

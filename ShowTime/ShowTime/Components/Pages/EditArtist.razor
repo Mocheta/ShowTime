@@ -1,0 +1,142 @@
+﻿@page "/edit-artist/{id:int}"
+@using ShowTime.BusinessLogic.Abstractions
+@using ShowTime.BusinessLogic.Dtos
+@inject IArtistService ArtistService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<style>
+    body {
+        background-color: #26244d; /* Light grey */
+    }
+
+    .add-artist-container {
+        max-width: 500px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    h3 {
+        color: #333;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 0.5rem;
+        margin-top: 1rem;
+        font-weight: 500;
+        color: #555;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #e1e5e9;
+        border-radius: 4px;
+        font-size: 1rem;
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+    }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+        }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        margin-top: 1.5rem;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+        width: 100%;
+    }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-primary:active {
+            transform: translateY(1px);
+        }
+</style>
+
+
+<div class="add-artist-container">
+<h3>Edit Artist</h3>
+
+@if (artist == null)
+{
+    <p><em>Loading artist...</em></p>
+}
+else
+{
+    <EditForm Model="artist" OnValidSubmit="UpdateArtist">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Name:</label>
+            <InputText @bind-Value="artist.Name" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Genre:</label>
+            <InputText @bind-Value="artist.Genre" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Image URL:</label>
+            <InputText @bind-Value="artist.Image" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <button type="button" class="btn btn-secondary ms-2" @onclick="@(() => Navigation.NavigateTo("/artists"))">Cancel</button>
+    </EditForm>
+}
+</div>
+
+
+@code {
+    [Parameter] public int id { get; set; }
+
+    private ArtistUpdateDto? artist;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var existing = await ArtistService.GetArtistbyIdAsync(id);
+        if (existing != null)
+        {
+            artist = new ArtistUpdateDto
+            {
+                Name = existing.Name,
+                Genre = existing.Genre,
+                Image = existing.Image
+            };
+        }
+    }
+
+    private async Task UpdateArtist()
+    {
+        if (artist is not null)
+        {
+            await ArtistService.UpdateArtistAsync(id, artist);
+            Navigation.NavigateTo("/artists");
+        }
+    }
+}

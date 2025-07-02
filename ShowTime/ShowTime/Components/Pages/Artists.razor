@@ -1,0 +1,131 @@
+﻿@page "/artists"
+@using ShowTime.BusinessLogic.Abstractions
+@using ShowTime.BusinessLogic.Dtos
+@inject IArtistService ArtistService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<style>
+    body {
+        background-color: #26244d; 
+    }
+
+    .artists-container h2 {
+        text-align: center;
+        color: white;
+        font-weight: bold;
+        margin-bottom: 1.5rem;
+    }
+
+    .artists-container .btn-success {
+        display: block;
+        margin: 0 auto 1.5rem auto;
+    }
+    .artists-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+        justify-items: center;
+    }
+
+    .artist-card {
+        background: #0d0d56;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        width: 300px;
+    }
+
+    .artist-image-container {
+        position: relative;
+        width: 300px;
+        height: 200px;
+        overflow: hidden;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .artist-image {
+        width: 300px;
+        height: 200px;
+        object-fit: cover;
+        object-position: center;
+        display: block;
+    }
+
+    .artist-name-overlay {
+        position: absolute;
+        bottom: 15px;
+        right: 15px;
+        color: white;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        text-align: right;
+    }
+
+    .artist-name {
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-bottom: 5px;
+    }
+
+    .artist-genre {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        font-weight: normal;
+    }
+
+    .artist-actions {
+        padding: 15px;
+        text-align: center;
+    }
+</style>
+
+<div class="artists-container">
+    <h2 >Artists</h2>
+
+    <button class="btn btn-success mb-3" @onclick="@(() => Navigation.NavigateTo("/add-artist"))">
+        Add New Artist
+    </button>
+
+    @if (artists.Count == 0)
+    {
+        <p>No artists registered</p>
+    }
+    else
+    {
+        <div class="artists-grid">
+            @foreach (var artist in artists)
+            {
+                <div class="artist-card">
+                    <div class="artist-image-container">
+                        <img src="@artist.Image" alt="@artist.Name" class="artist-image" />
+                        <div class="artist-name-overlay">
+                            <div class="artist-name">@artist.Name</div>
+                            <div class="artist-genre">@artist.Genre</div>
+                        </div>
+                    </div>
+                    <div class="artist-actions">
+                        <button class="btn btn-primary me-2" @onclick="@(() => Navigation.NavigateTo($"/edit-artist/{artist.Id}"))">Edit</button>
+                        <button class="btn btn-danger" @onclick="@(() => DeleteArtist(artist.Id))">Delete</button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+@code {
+	private IList<ArtistGetDto> artists = new List<ArtistGetDto>();
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadArtists();
+	}
+	private async Task LoadArtists()
+    {
+        artists = await ArtistService.GetAllArtistsAsync();
+    }
+	
+	private async Task DeleteArtist(int id)
+	{
+        await ArtistService.DeleteArtistAsync(id);
+        await LoadArtists();
+	}
+}
