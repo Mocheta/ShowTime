@@ -27,9 +27,8 @@ namespace ShowTime.DataAccess.Configurations
                 .IsRequired();
             builder.Property(f => f.EndDate)
                 .IsRequired();
-            builder.Property(f => f.SplashArtist)
-                .IsRequired()
-                .HasMaxLength(100);
+            builder.Property(f => f.SplashArt)
+                .IsRequired();
             builder.Property(f => f.capacity)
                 .IsRequired();
 

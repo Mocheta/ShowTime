@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ShowTime.DataAccess.Models
+namespace ShowTime.BusinessLogic.Dtos
 {
-    public class Festival
+    public class FestivalGetDto
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
@@ -14,10 +14,7 @@ namespace ShowTime.DataAccess.Models
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public string SplashArt { get; set; } = string.Empty;
-        public int capacity { get; set; }
-        public ICollection<Lineup> Lineups { get; set; } = new List<Lineup>();
-        public ICollection<Artist> Artists { get; set; } = new List<Artist>();
-        public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
-        public ICollection<User> Users { get; set; } = new List<User>();
+        public int Capacity { get; set; }
+        public IList<int> ArtistIds { get; set; } = new List<int>();
     }
 }

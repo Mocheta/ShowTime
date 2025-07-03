@@ -1,23 +1,477 @@
 ﻿@page "/festivals"
-
+@using ShowTime.BusinessLogic.Abstractions
+@using ShowTime.BusinessLogic.Dtos
+@inject IFestivalService FestivalService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
 
 <style>
-	body {
-		background-color: #26244d; 
-	}
-	.festivals-container h2 {
-		text-align: center;
-		color: white;
-		font-weight: bold;
-		margin-bottom: 1.5rem;
-	}
+    body {
+        background-color: #26244d;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 0;
+    }
+
+    .festivals-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+        .festivals-container h2 {
+            text-align: center;
+            color: #ffffff;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+    .add-festival-btn {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 12px 24px;
+        font-size: 1.1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        margin-bottom: 2rem;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+        .add-festival-btn:hover {
+            background: linear-gradient(45deg, #218838, #1ba085);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+
+    .festivals-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    .festival-card {
+        background: linear-gradient(135deg, #3d3b6b, #4a4872);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        transition: all 0.3s ease;
+        position: relative;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+        .festival-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 16px 32px rgba(0,0,0,0.4);
+            border-color: rgba(255,255,255,0.2);
+        }
+
+    .festival-image-container {
+        position: relative;
+        height: 200px;
+        overflow: hidden;
+    }
+
+    .festival-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+
+    .festival-card:hover .festival-image {
+        transform: scale(1.05);
+    }
+
+    .festival-name-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(transparent, rgba(0,0,0,0.8));
+        color: white;
+        padding: 20px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+    }
+
+    .festival-details {
+        padding: 1.5rem;
+        color: #ffffff;
+    }
+
+    .festival-info {
+        margin-bottom: 1.5rem;
+    }
+
+        .festival-info p {
+            margin: 0.5rem 0;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .festival-info strong {
+            color: #20c997;
+            min-width: 80px;
+        }
+
+    .info-icon {
+        width: 16px;
+        height: 16px;
+        fill: #20c997;
+    }
+
+    .artists-section {
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-top: 1rem;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .artists-title {
+        color: #20c997;
+        font-weight: bold;
+        margin-bottom: 0.75rem;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .artists-grid {
+        display: grid;
+        /* Reverting to a more flexible grid for artists */
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .artist-card {
+        background: rgba(255,255,255,0.08);
+        border-radius: 8px;
+        padding: 0.75rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+        .artist-card:hover {
+            background: rgba(255,255,255,0.12);
+            transform: translateY(-2px);
+            border-color: #20c997;
+        }
+
+    .artist-name {
+        font-weight: bold;
+        color: #ffffff;
+        margin-bottom: 0.25rem;
+        font-size: 0.9rem;
+    }
+
+    .artist-genre {
+        color: #b8b8b8;
+        font-size: 0.8rem;
+        font-style: italic;
+    }
+
+    .no-artists {
+        color: #b8b8b8;
+        font-style: italic;
+        text-align: center;
+        padding: 1rem;
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .more-artists {
+        background: rgba(32, 201, 151, 0.2);
+        border: 1px dashed #20c997;
+        color: #20c997;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+        .more-artists:hover {
+            background: rgba(32, 201, 151, 0.3);
+            transform: translateY(-2px);
+        }
+
+    .no-festivals {
+        text-align: center;
+        color: #b8b8b8;
+        font-size: 1.2rem;
+        margin-top: 3rem;
+        padding: 2rem;
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .loading {
+        text-align: center;
+        color: #20c997;
+        font-size: 1.2rem;
+        margin-top: 3rem;
+    }
+
+    .date-range {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .date-separator {
+        color: #20c997;
+        font-weight: bold;
+    }
+
+    .festival-actions {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        display: flex;
+        gap: 8px;
+        /* Ensure buttons are above content */
+        z-index: 10;
+    }
+
+    /* Redefining action buttons to remove Bootstrap conflict */
+    .action-btn {
+        border: none;
+        color: white;
+        padding: 8px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3); /* Add subtle shadow */
+    }
+
+    .edit-btn {
+        background-color: #28a745; /* Green */
+    }
+
+        .edit-btn:hover {
+            background-color: #218838; /* Darker green on hover */
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+        }
+
+    .delete-btn {
+        background-color: #dc3545; /* Red */
+    }
+
+        .delete-btn:hover {
+            background-color: #c82333; /* Darker red on hover */
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+        }
 </style>
 
 <div class="festivals-container">
-<h2>Festivals</h2>
+    <h2>🎵 Music Festivals</h2>
 
+    <button class="add-festival-btn" @onclick="@(() => Navigation.NavigateTo("/add-festival"))">
+        ➕ Add New Festival
+    </button>
+
+    @if (isLoading)
+    {
+        <div class="loading">
+            🎪 Loading festivals...
+        </div>
+    }
+    else if (festivals == null || festivals.Count == 0)
+    {
+        <div class="no-festivals">
+            <h3>🎭 No festivals found</h3>
+            <p>Start by adding your first festival!</p>
+        </div>
+    }
+    else
+    {
+        <div class="festivals-grid">
+            @foreach (var festival in festivals)
+            {
+                <div class="festival-card">
+                    <div class="festival-actions">
+                        <button class="action-btn edit-btn" @onclick="@(() => Navigation.NavigateTo($"/edit-festival/{festival.Id}"))">Edit</button>
+                        <button class="action-btn delete-btn" @onclick="@(() => DeleteFestival(festival.Id))">Delete</button>
+                    </div>
+
+                    <div class="festival-image-container">
+                        <img src="@festival.SplashArt" alt="@festival.Name" class="festival-image" />
+                        <div class="festival-name-overlay">@festival.Name</div>
+                    </div>
+
+                    <div class="festival-details">
+                        <div class="festival-info">
+                            <p>
+                                <svg class="info-icon" viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                                </svg>
+                                <strong>Dates:</strong>
+                                <span class="date-range">
+                                    @festival.StartDate.ToString("MMM dd, yyyy")
+                                    <span class="date-separator">→</span>
+                                    @festival.EndDate.ToString("MMM dd, yyyy")
+                                </span>
+                            </p>
+
+                            <p>
+                                <svg class="info-icon" viewBox="0 0 24 24">
+                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                                </svg>
+                                <strong>Location:</strong> @festival.Location
+                            </p>
+                        </div>
+
+                        <div class="artists-section">
+                            <div class="artists-title">
+                                <svg class="info-icon" viewBox="0 0 24 24">
+                                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+                                </svg>
+                                Featured Artists
+                            </div>
+
+                            @if (GetFestivalArtists(festival.Id) != null && GetFestivalArtists(festival.Id).Any())
+                            {
+                                <div class="artists-grid">
+                                    @{
+                                        var festivalArtists = GetFestivalArtists(festival.Id);
+                                        var artistsToShow = festivalArtists.Take(3).ToList();
+                                        var remainingCount = festivalArtists.Count - 3;
+                                    }
+
+                                    @foreach (var artist in artistsToShow)
+                                    {
+                                        <div class="artist-card">
+                                            <div class="artist-name">@artist.Name</div>
+                                            <div class="artist-genre">@artist.Genre</div>
+                                        </div>
+                                    }
+
+                                    @if (remainingCount > 0)
+                                    {
+                                        <div class="artist-card more-artists">
+                                            +@remainingCount more
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="no-artists">
+                                    🎤 No artists assigned yet
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
 </div>
 
+
 @code {
+    private IList<FestivalGetDto> festivals = new List<FestivalGetDto>();
+    private Dictionary<int, IList<ArtistGetDto>> festivalArtists = new Dictionary<int, IList<ArtistGetDto>>();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFestivals();
+    }
+
+    private async Task LoadFestivals()
+    {
+        try
+        {
+            isLoading = true;
+            festivals = await FestivalService.GetAllFestivalsAsync();
+
+            if (festivals == null || festivals.Count == 0)
+            {
+                Console.WriteLine("No festivals found.");
+            }
+            else
+            {
+                // Load artists for each festival
+                await LoadFestivalArtists();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching festivals: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadFestivalArtists()
+    {
+        try
+        {
+            foreach (var festival in festivals)
+            {
+                // Assuming you have a method to get artists by festival ID
+                // Replace this with your actual method name
+                var artists = await FestivalService.GetFestivalArtistsAsync(festival.Id);
+                if (artists != null)
+                {
+                    festivalArtists[festival.Id] = artists;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading festival artists: {ex.Message}");
+        }
+    }
+
+    private IList<ArtistGetDto> GetFestivalArtists(int festivalId)
+    {
+        festivalArtists.TryGetValue(festivalId, out var artists);
+        return artists ?? new List<ArtistGetDto>();
+    }
+    
+
+    private async Task DeleteFestival(int festivalId)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this festival?"))
+        {
+            try
+            {
+                await FestivalService.DeleteFestivalAsync(festivalId);
+                await LoadFestivals(); // Refresh the list
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting festival: {ex.Message}");
+            }
+        }
+    }
 
 }

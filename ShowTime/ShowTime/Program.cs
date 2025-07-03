@@ -20,6 +20,9 @@ builder.Services.AddDbContext<ShowTimeDBContext>(options =>
 builder.Services.AddTransient<IRepo<Artist>, GenericImplement<Artist>>();
 builder.Services.AddTransient<IArtistService, ArtistService>();
 
+builder.Services.AddTransient<IRepo<Festival>, GenericImplement<Festival>>();
+builder.Services.AddTransient<IFestivalService, FestivalService>();
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 

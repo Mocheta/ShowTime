@@ -75,20 +75,20 @@
         }
 </style>
 <div class="add-artist-container">
-<h3>Add a new artist</h3>
+    <h3>Add a new artist</h3>
 
-<EditForm Model="newArtist" OnValidSubmit="HandleAddArtist" FormName="AddArtistForm">
-	<label>Nume:</label>
-	<InputText @bind-Value="newArtist.Name" class="form-control"></InputText>
+    <EditForm Model="newArtist" OnValidSubmit="HandleAddArtist" FormName="AddArtistForm">
+	    <label>Nume:</label>
+	    <InputText @bind-Value="newArtist.Name" class="form-control"></InputText>
 
-	<label>Gen:</label>
-	<InputText @bind-Value="newArtist.Genre" class="form-control"></InputText>
+	    <label>Gen:</label>
+	    <InputText @bind-Value="newArtist.Genre" class="form-control"></InputText>
 
-	<label>Image:</label>
-	<InputText @bind-Value="newArtist.Image" class="form-control"></InputText>
+	    <label>Image:</label>
+	    <InputText @bind-Value="newArtist.Image" class="form-control"></InputText>
 
-	<button type="submit" class="btn btn-primary">Add Artist</button>
-</EditForm>
+	    <button type="submit" class="btn btn-primary">Add Artist</button>
+    </EditForm>
 
 </div>
 

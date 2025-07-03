@@ -1,0 +1,343 @@
+﻿@page "/edit-festival/{FestivalId:int}"
+@using ShowTime.BusinessLogic.Abstractions
+@using ShowTime.BusinessLogic.Dtos
+@inject IFestivalService FestivalService
+@inject IArtistService? ArtistService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<style>
+    body {
+        background-color: #26244d;
+    }
+
+    .edit-festival-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        color: white;
+    }
+
+        .edit-festival-container h3 {
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+        }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+        .form-group label {
+            color: white;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+    .artists-section {
+        background-color: #3d3b6b;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+
+    .artist-item {
+        background-color: #4a4872;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+    }
+
+    .artist-checkbox {
+        margin-right: 10px;
+    }
+
+    .selected-artists {
+        background-color: #2a5d31;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+    }
+
+    .selected-artist-tag {
+        background-color: #28a745;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 15px;
+        margin: 3px;
+        display: inline-block;
+        font-size: 0.9rem;
+    }
+
+    .remove-artist {
+        margin-left: 8px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .loading {
+        text-align: center;
+        color: #20c997;
+        font-size: 1.2rem;
+        margin-top: 3rem;
+    }
+</style>
+
+<div class="edit-festival-container">
+    @if (isLoading)
+    {
+        <div class="loading">
+            🎪 Loading festival...
+        </div>
+    }
+    else if (editFestival == null)
+    {
+        <h3>Festival not found</h3>
+        <button class="btn btn-secondary" @onclick="@(() => Navigation.NavigateTo("/festivals"))">Back to Festivals</button>
+    }
+    else
+    {
+        <h3>Edit Festival</h3>
+        <EditForm Model="editFestival" OnValidSubmit="HandleEditFestival" FormName="EditFestivalForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="form-group">
+                <label for="name">Name</label>
+                <InputText id="name" class="form-control" @bind-Value="editFestival.Name" />
+                <ValidationMessage For="@(() => editFestival.Name)" />
+            </div>
+
+            <div class="form-group">
+                <label for="location">Location</label>
+                <InputText id="location" class="form-control" @bind-Value="editFestival.Location" />
+                <ValidationMessage For="@(() => editFestival.Location)" />
+            </div>
+
+            <div class="form-group">
+                <label for="startDate">Start Date</label>
+                <InputDate id="startDate" class="form-control" @bind-Value="editFestival.StartDate" />
+                <ValidationMessage For="@(() => editFestival.StartDate)" />
+            </div>
+
+            <div class="form-group">
+                <label for="endDate">End Date</label>
+                <InputDate id="endDate" class="form-control" @bind-Value="editFestival.EndDate" />
+                <ValidationMessage For="@(() => editFestival.EndDate)" />
+            </div>
+
+            <div class="form-group">
+                <label for="splashArt">Splash Art URL</label>
+                <InputText id="splashArt" class="form-control" @bind-Value="editFestival.SplashArt" />
+                <ValidationMessage For="@(() => editFestival.SplashArt)" />
+            </div>
+
+            <!-- Artists Selection Section -->
+            <div class="artists-section">
+                <h4>Select Artists</h4>
+
+                @if (availableArtists != null && availableArtists.Any())
+                {
+                    <div class="form-group">
+                        <label for="artistSearch">Search Artists:</label>
+                        <InputText id="artistSearch" class="form-control" @bind-Value="artistSearchTerm" @oninput="FilterArtists" placeholder="Type to search artists..." />
+                    </div>
+
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        @foreach (var artist in filteredArtists)
+                        {
+                            <div class="artist-item">
+                                <input type="checkbox" class="artist-checkbox"
+                                       checked="@IsArtistSelected(artist.Id)"
+                                       @onchange="@((e) => ToggleArtistSelection(artist, e.Value as bool? ?? false))" />
+                                <span>@artist.Name (@artist.Genre)</span>
+                            </div>
+                        }
+                    </div>
+                }
+                else if (isLoadingArtists)
+                {
+                    <p>Loading artists...</p>
+                }
+                else
+                {
+                    <p>No artists available. <a href="/add-artist" style="color: #28a745;">Add some artists first</a></p>
+                }
+
+                @if (selectedArtists.Any())
+                {
+                    <div class="selected-artists">
+                        <h5>Selected Artists (@selectedArtists.Count):</h5>
+                        @foreach (var artist in selectedArtists)
+                        {
+                            <span class="selected-artist-tag">
+                                @artist.Name
+                                <span class="remove-artist" @onclick="@(() => RemoveArtist(artist))">×</span>
+                            </span>
+                        }
+                    </div>
+                }
+            </div>
+
+            <button type="submit" class="btn btn-primary">Update Festival</button>
+            <button type="button" class="btn btn-secondary ml-2" @onclick="@(() => Navigation.NavigateTo("/festivals"))">Cancel</button>
+        </EditForm>
+    }
+</div>
+
+@code {
+    [Parameter] public int FestivalId { get; set; }
+
+    [SupplyParameterFromForm]
+    private FestivalUpdateDto editFestival { get; set; } = new FestivalUpdateDto();
+
+    private IList<ArtistGetDto> availableArtists = new List<ArtistGetDto>();
+    private IList<ArtistGetDto> filteredArtists = new List<ArtistGetDto>();
+    private List<ArtistGetDto> selectedArtists = new List<ArtistGetDto>();
+    private string artistSearchTerm = "";
+    private bool isLoadingArtists = true;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFestival();
+        await LoadArtists();
+        await LoadFestivalArtists();
+    }
+
+    private async Task LoadFestival()
+    {
+        try
+        {
+            isLoading = true;
+            var festival = await FestivalService.GetFestivalByIdAsync(FestivalId);
+
+            if (festival != null)
+            {
+                editFestival = new FestivalUpdateDto
+                {
+                    Name = festival.Name,
+                    Location = festival.Location,
+                    StartDate = festival.StartDate,
+                    EndDate = festival.EndDate,
+					Capacity = festival.Capacity,
+                    SplashArt = festival.SplashArt
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading festival: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadArtists()
+    {
+        try
+        {
+            isLoadingArtists = true;
+            if (ArtistService != null)
+            {
+                availableArtists = await ArtistService.GetAllArtistsAsync();
+                filteredArtists = availableArtists.ToList();
+            }
+            isLoadingArtists = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading artists: {ex.Message}");
+            isLoadingArtists = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadFestivalArtists()
+    {
+        try
+        {
+            var festivalArtists = await FestivalService.GetFestivalArtistsAsync(FestivalId);
+            if (festivalArtists != null)
+            {
+                selectedArtists = festivalArtists.ToList();
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading festival artists: {ex.Message}");
+        }
+    }
+
+    private void FilterArtists(ChangeEventArgs e)
+    {
+        artistSearchTerm = e.Value?.ToString() ?? "";
+
+        if (string.IsNullOrWhiteSpace(artistSearchTerm))
+        {
+            filteredArtists = availableArtists.ToList();
+        }
+        else
+        {
+            filteredArtists = availableArtists
+                .Where(a => a.Name.Contains(artistSearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                           a.Genre.Contains(artistSearchTerm, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+        StateHasChanged();
+    }
+
+    private bool IsArtistSelected(int artistId)
+    {
+        return selectedArtists.Any(a => a.Id == artistId);
+    }
+
+    private void ToggleArtistSelection(ArtistGetDto artist, bool isSelected)
+    {
+        if (isSelected)
+        {
+            if (!selectedArtists.Any(a => a.Id == artist.Id))
+            {
+                selectedArtists.Add(artist);
+            }
+        }
+        else
+        {
+            selectedArtists.RemoveAll(a => a.Id == artist.Id);
+        }
+        StateHasChanged();
+    }
+
+    private void RemoveArtist(ArtistGetDto artist)
+    {
+        selectedArtists.RemoveAll(a => a.Id == artist.Id);
+        StateHasChanged();
+    }
+
+    private async Task HandleEditFestival()
+    {
+        try
+        {
+            // Add the selected artist IDs to the festival DTO
+            editFestival.ArtistIds = selectedArtists.Select(a => a.Id).ToList();
+
+            await FestivalService.UpdateFestivalAsync(FestivalId, editFestival);
+            Navigation.NavigateTo("/festivals");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating festival: {ex.Message}");
+            // Optionally display error to the user
+        }
+    }
+
+}
