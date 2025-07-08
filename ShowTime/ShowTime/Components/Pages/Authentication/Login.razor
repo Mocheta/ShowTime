@@ -177,7 +177,7 @@
 
             await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal);
 
-            httpContext.Response.Redirect("/"); // Perform HTTP redirect to home page
+            httpContext.Response.Redirect("/artists"); // Perform HTTP redirect to home page
         }
         catch (Exception ex)
         {
