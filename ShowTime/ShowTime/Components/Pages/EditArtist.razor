@@ -87,23 +87,27 @@
 else
 {
     <EditForm Model="artist" OnValidSubmit="UpdateArtist">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
+            <DataAnnotationsValidator />
+            <ValidationSummary />
 
-        <div class="mb-3">
-            <label>Name:</label>
-            <InputText @bind-Value="artist.Name" class="form-control" />
-        </div>
+            <div class="mb-3">
+                <label>Name:</label>
+                <InputText @bind-Value="artist.Name" class="form-control" />
+                <ValidationMessage For="@(() => artist.Name)" />
+            </div>
 
-        <div class="mb-3">
-            <label>Genre:</label>
-            <InputText @bind-Value="artist.Genre" class="form-control" />
-        </div>
+            <div class="mb-3">
+                <label>Genre:</label>
+                <InputText @bind-Value="artist.Genre" class="form-control" />
+                <ValidationMessage For="@(() => artist.Genre)" />
+            </div>
 
-        <div class="mb-3">
-            <label>Image URL:</label>
-            <InputText @bind-Value="artist.Image" class="form-control" />
-        </div>
+            <div class="mb-3">
+                <label>Image URL:</label>
+                <InputText @bind-Value="artist.Image" class="form-control" />
+                <ValidationMessage For="@(() => artist.Image)" />
+            </div>
+
 
         <button type="submit" class="btn btn-primary">Save Changes</button>
         <button type="button" class="btn btn-secondary ms-2" @onclick="@(() => Navigation.NavigateTo("/artists"))">Cancel</button>

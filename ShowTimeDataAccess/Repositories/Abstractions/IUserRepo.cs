@@ -9,6 +9,6 @@ namespace ShowTime.DataAccess.Repositories.Abstractions
 {
     public interface IUserRepo : IRepo<User>
     {
-
+        public Task<User?> GetByEmailAsync(string email);
     }
 }

@@ -9,7 +9,7 @@ namespace ShowTime.DataAccess.Models
     public class User
     {
         public int Id { get; set; }
-        public int role { get; set; } // 0 for user, 1 for admin
+        public int Role { get; set; } // 0 for user, 1 for admin
         public string Password { get; set; } = string.Empty;    
         public string Email { get; set; } = string.Empty;
 

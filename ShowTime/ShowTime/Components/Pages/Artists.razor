@@ -4,10 +4,11 @@
 @inject IArtistService ArtistService
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
+@inject IJSRuntime JS
 
 <style>
     body {
-        background-color: #26244d; 
+        background-color: #26244d;
     }
 
     .artists-container h2 {
@@ -21,6 +22,99 @@
         display: block;
         margin: 0 auto 1.5rem auto;
     }
+
+    .search-filter-container {
+        max-width: 800px;
+        margin: 0 auto 2rem auto;
+        padding: 1rem;
+        background: #0d0d56;
+        border-radius: 15px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .search-bar {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #4a4a8a;
+        border-radius: 10px;
+        background: #26244d;
+        color: white;
+        font-size: 1rem;
+        margin-bottom: 1rem;
+    }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+        }
+
+        .search-bar::placeholder {
+            color: #a0a0c0;
+        }
+
+    .filter-row {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .filter-label {
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .filter-select {
+        padding: 0.5rem;
+        border: 2px solid #4a4a8a;
+        border-radius: 8px;
+        background: #26244d;
+        color: white;
+        font-size: 0.9rem;
+        min-width: 150px;
+    }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+        }
+
+        .filter-select option {
+            background: #26244d;
+            color: white;
+        }
+
+    .clear-filters-btn {
+        background: #764ba2;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: background-color 0.2s ease;
+    }
+
+        .clear-filters-btn:hover {
+            background: #5a3a7a;
+        }
+
+    .results-info {
+        color: #a0a0c0;
+        text-align: center;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+
     .artists-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -34,7 +128,13 @@
         overflow: hidden;
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         width: 300px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
+
+        .artist-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
 
     .artist-image-container {
         position: relative;
@@ -77,23 +177,76 @@
         padding: 15px;
         text-align: center;
     }
+
+        .artist-actions button {
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+
+            .artist-actions button:hover {
+                transform: scale(1.05);
+                filter: brightness(1.1);
+            }
+
+    .no-results {
+        text-align: center;
+        color: #a0a0c0;
+        font-size: 1.1rem;
+        margin-top: 2rem;
+    }
 </style>
 
 <div class="artists-container">
-    <h2 >Artists</h2>
+    <h2>Artists</h2>
 
     <button class="btn btn-success mb-3" @onclick="@(() => Navigation.NavigateTo("/add-artist"))">
         Add New Artist
     </button>
 
-    @if (artists.Count == 0)
+    @if (allArtists.Count > 0)
     {
-        <p>No artists registered</p>
+        <div class="search-filter-container">
+            <input type="text"
+                   class="search-bar"
+                   placeholder="Search artists by name or genre..."
+                   @bind="searchTerm"
+                   @oninput="OnSearchInput" />
+
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label class="filter-label">Filter by Genre:</label>
+                    <select class="filter-select" @bind="selectedGenreFilter" @bind:after="ApplyFilters">
+                        <option value="">All Genres</option>
+                        @foreach (var genre in uniqueGenres)
+                        {
+                            <option value="@genre">@genre</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">&nbsp;</label>
+                    <button class="clear-filters-btn" @onclick="ClearFilters">Clear Filters</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-info">
+            Showing @filteredArtists.Count of @allArtists.Count artists
+        </div>
+    }
+
+    @if (allArtists.Count == 0)
+    {
+        <p class="no-results">No artists registered</p>
+    }
+    else if (filteredArtists.Count == 0)
+    {
+        <p class="no-results">No artists match your search criteria</p>
     }
     else
     {
         <div class="artists-grid">
-            @foreach (var artist in artists)
+            @foreach (var artist in filteredArtists)
             {
                 <div class="artist-card">
                     <div class="artist-image-container">
@@ -112,20 +265,69 @@
         </div>
     }
 </div>
+
 @code {
-	private IList<ArtistGetDto> artists = new List<ArtistGetDto>();
-	protected override async Task OnInitializedAsync()
-	{
-		await LoadArtists();
-	}
-	private async Task LoadArtists()
+    private IList<ArtistGetDto> allArtists = new List<ArtistGetDto>();
+    private IList<ArtistGetDto> filteredArtists = new List<ArtistGetDto>();
+    private string searchTerm = "";
+    private string selectedGenreFilter = "";
+    private IList<string> uniqueGenres = new List<string>();
+
+    protected override async Task OnInitializedAsync()
     {
-        artists = await ArtistService.GetAllArtistsAsync();
-    }
-	
-	private async Task DeleteArtist(int id)
-	{
-        await ArtistService.DeleteArtistAsync(id);
         await LoadArtists();
-	}
+    }
+
+    private async Task LoadArtists()
+    {
+        allArtists = await ArtistService.GetAllArtistsAsync();
+        filteredArtists = allArtists;
+
+        // Populate unique genres for filter dropdown
+        uniqueGenres = allArtists.Select(a => a.Genre).Distinct().OrderBy(g => g).ToList();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        ApplyFilters();
+    }
+
+    private void ApplyFilters()
+    {
+        filteredArtists = allArtists.Where(artist =>
+        {
+            // Search term filter (searches both name and genre)
+            bool matchesSearch = string.IsNullOrEmpty(searchTerm) ||
+                                artist.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                                artist.Genre.Contains(searchTerm, StringComparison.OrdinalIgnoreCase);
+
+            // Genre filter
+            bool matchesGenre = string.IsNullOrEmpty(selectedGenreFilter) ||
+                               artist.Genre.Equals(selectedGenreFilter, StringComparison.OrdinalIgnoreCase);
+
+            return matchesSearch && matchesGenre;
+        }).ToList();
+
+        StateHasChanged();
+    }
+
+    private void ClearFilters()
+    {
+        searchTerm = "";
+        selectedGenreFilter = "";
+        filteredArtists = allArtists;
+        StateHasChanged();
+    }
+
+    private async Task DeleteArtist(int id)
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete this artist?");
+        if (confirmed)
+        {
+            await ArtistService.DeleteArtistAsync(id);
+            await LoadArtists();
+            ApplyFilters(); // Reapply filters after deletion
+        }
+    }
 }

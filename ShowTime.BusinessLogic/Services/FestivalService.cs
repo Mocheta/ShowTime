@@ -168,6 +168,8 @@ namespace ShowTime.BusinessLogic.Services
                 {
                     throw new KeyNotFoundException($"Festival with ID {id} not found.");
                 }
+
+                // Now festival.Artists should be populated thanks to the modified GenericImplement
                 return festival.Artists.Select(artist => new ArtistGetDto
                 {
                     Id = artist.Id,
@@ -176,14 +178,9 @@ namespace ShowTime.BusinessLogic.Services
                     Genre = artist.Genre
                 }).ToList();
             }
-            catch (KeyNotFoundException ex)
-            {
-                Console.WriteLine($"Error fetching artists for festival ID {id}: {ex.Message}");
-                throw;
-            }
             catch (Exception ex)
             {
-                Console.WriteLine($"Unexpected error fetching artists for festival ID {id}: {ex.Message}");
+                Console.WriteLine($"Error fetching artists for festival ID {id}: {ex.Message}");
                 throw new InvalidOperationException("An unexpected error occurred while fetching the festival artists", ex);
             }
         }

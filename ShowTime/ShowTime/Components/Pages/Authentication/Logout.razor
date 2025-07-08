@@ -1,0 +1,23 @@
+﻿@page "/logout"
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<h3>Logout</h3>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; } = default!;
+
+    [CascadingParameter]
+    private HttpContext httpContext { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        httpContext.Response.Redirect("/login"); // Redirect to login page after logout
+    }
+}

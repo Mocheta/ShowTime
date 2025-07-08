@@ -1,5 +1,8 @@
 ﻿@page "/weather"
+@using Microsoft.AspNetCore.Authorization
+@using ShowTime.DataAccess.Models
 @attribute [StreamRendering]
+@attribute [Authorize(Roles = "Admin")]
 
 <PageTitle>Weather</PageTitle>
 

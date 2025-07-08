@@ -15,7 +15,7 @@ namespace ShowTime.DataAccess.Configurations
         {
             builder.ToTable("Users");
             builder.HasKey(u => u.Id);
-            builder.Property(u => u.role)
+            builder.Property(u => u.Role)
                 .IsRequired();
             builder.Property(u => u.Password)
                 .IsRequired()

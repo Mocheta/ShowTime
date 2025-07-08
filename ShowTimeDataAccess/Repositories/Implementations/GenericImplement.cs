@@ -1,4 +1,5 @@
 ﻿using ShowTime.DataAccess.Repositories.Abstractions;
+using ShowTime.DataAccess.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,8 +12,9 @@ namespace ShowTime.DataAccess.Repositories.Implementations
     public class GenericImplement<T> : IRepo<T> where T : class
     {
         private readonly ShowTimeDBContext _context;
-        public GenericImplement(ShowTimeDBContext context) {
-            _context = context; 
+        public GenericImplement(ShowTimeDBContext context)
+        {
+            _context = context;
         }
 
         public virtual async Task AddAsync(T entity)
@@ -30,7 +32,7 @@ namespace ShowTime.DataAccess.Repositories.Implementations
             catch (ArgumentNullException ex)
             {
                 Console.WriteLine($"Validation error in Add: {ex.Message}");
-                throw; 
+                throw;
             }
             catch (DbUpdateException ex)
             {
@@ -59,7 +61,7 @@ namespace ShowTime.DataAccess.Repositories.Implementations
             catch (ArgumentNullException ex)
             {
                 Console.WriteLine($"Validation error in Delete: {ex.Message}");
-                throw; 
+                throw;
             }
             catch (DbUpdateException ex)
             {
@@ -73,11 +75,43 @@ namespace ShowTime.DataAccess.Repositories.Implementations
             }
         }
 
-
         public virtual async Task<IEnumerable<T>> GetAllAsync()
         {
             try
             {
+                // Include related data for Festival entities
+                if (typeof(T) == typeof(Festival))
+                {
+                    return await _context.Set<Festival>()
+                        .Include(f => f.Artists)
+                        .Include(f => f.Lineups)
+                            .ThenInclude(l => l.Artist)
+                        .Cast<T>()
+                        .ToListAsync();
+                }
+
+                // Include related data for Artist entities
+                if (typeof(T) == typeof(Artist))
+                {
+                    return await _context.Set<Artist>()
+                        .Include(a => a.Festivals)
+                        .Include(a => a.Lineups)
+                            .ThenInclude(l => l.Festival)
+                        .Cast<T>()
+                        .ToListAsync();
+                }
+
+                // Include related data for Lineup entities
+                if (typeof(T) == typeof(Lineup))
+                {
+                    return await _context.Set<Lineup>()
+                        .Include(l => l.Festival)
+                        .Include(l => l.Artist)
+                        .Cast<T>()
+                        .ToListAsync();
+                }
+
+                // Default behavior for other entities
                 return await _context.Set<T>().ToListAsync();
             }
             catch (InvalidOperationException ex)
@@ -90,7 +124,6 @@ namespace ShowTime.DataAccess.Repositories.Implementations
                 Console.WriteLine($"Unexpected error in GetAll: {ex.Message}");
                 throw new InvalidOperationException("An unexpected error occurred while retrieving entities", ex);
             }
-
         }
 
         public virtual async Task<T?> GetByIdAsync(int id)
@@ -102,12 +135,46 @@ namespace ShowTime.DataAccess.Repositories.Implementations
                     throw new ArgumentOutOfRangeException(nameof(id), "ID must be greater than zero");
                 }
 
+                // Include related data for Festival entities
+                if (typeof(T) == typeof(Festival))
+                {
+                    var festival = await _context.Set<Festival>()
+                        .Include(f => f.Artists)
+                        .Include(f => f.Lineups)
+                            .ThenInclude(l => l.Artist)
+                        .FirstOrDefaultAsync(f => f.Id == id);
+                    return festival as T;
+                }
+
+                // Include related data for Artist entities
+                if (typeof(T) == typeof(Artist))
+                {
+                    var artist = await _context.Set<Artist>()
+                        .Include(a => a.Festivals)
+                        .Include(a => a.Lineups)
+                            .ThenInclude(l => l.Festival)
+                        .FirstOrDefaultAsync(a => a.Id == id);
+                    return artist as T;
+                }
+
+                // Include related data for Lineup entities (using composite key)
+                if (typeof(T) == typeof(Lineup))
+                {
+                    // Note: Lineup uses composite key, so this might need special handling
+                    var lineup = await _context.Set<Lineup>()
+                        .Include(l => l.Festival)
+                        .Include(l => l.Artist)
+                        .FirstOrDefaultAsync();
+                    return lineup as T;
+                }
+
+                // Default behavior for other entities
                 return await _context.Set<T>().FindAsync(id);
             }
             catch (ArgumentOutOfRangeException ex)
             {
                 Console.WriteLine($"Validation error in GetById: {ex.Message}");
-                throw; 
+                throw;
             }
             catch (InvalidOperationException ex)
             {
@@ -136,7 +203,7 @@ namespace ShowTime.DataAccess.Repositories.Implementations
             catch (ArgumentNullException ex)
             {
                 Console.WriteLine($"Validation error in Update: {ex.Message}");
-                throw; 
+                throw;
             }
             catch (DbUpdateConcurrencyException ex)
             {

@@ -245,7 +245,6 @@
     {
         try
         {
-            // Add the selected artist IDs to the festival DTO
             newFestival.ArtistIds = selectedArtists.Select(a => a.Id).ToList();
 
             await FestivalService.AddFestivalAsync(newFestival);
@@ -254,7 +253,6 @@
         catch (Exception ex)
         {
             Console.WriteLine($"Error adding festival: {ex.Message}");
-            // Handle error appropriately, e.g., show a message to the user
         }
     }
 
