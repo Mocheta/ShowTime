@@ -11,10 +11,13 @@ namespace ShowTime.DataAccess.Repositories.Implementations
 {
     public class UserImplement : GenericImplement<User>, IUserRepo
     {
+        private readonly ShowTimeDBContext _context;
+
         private readonly DbSet<User> _users;
 
         public UserImplement(ShowTimeDBContext context) : base(context)
         {
+            _context = context;
             _users = context.Set<User>();
         }
 
@@ -40,6 +43,33 @@ namespace ShowTime.DataAccess.Repositories.Implementations
             catch (Exception ex)
             {
                 throw new Exception($"Unable to retrieve user with email {email}: {ex.Message}");
+            }
+        }
+        public async Task<IList<Booking>> GetBookingsByUserIdAsync(int userId)
+        {
+            return await _users
+                .Where(u => u.Id == userId)
+                .SelectMany(u => u.Bookings)
+                .ToListAsync();
+        }
+        public async Task<IList<Ticket>> GetTicketsByUserIdAsync(int userId)
+        {
+            return await _users
+                .Where(u => u.Id == userId)
+                .SelectMany(u => u.Tickets)
+                .ToListAsync();
+        }
+        public async Task DeleteUserBookingsAsync(int userId)
+        {
+            var user = await _users.Include(u => u.Bookings).FirstOrDefaultAsync(u => u.Id == userId);
+            if (user != null)
+            {
+                _context.Bookings.RemoveRange(user.Bookings);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                throw new Exception($"User with ID {userId} not found.");
             }
         }
     }

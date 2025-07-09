@@ -21,6 +21,8 @@ namespace ShowTime.DataAccess.Configurations
 
             builder.Property(t => t.Type)
                 .IsRequired();
+            builder.Property(t => t.Quantity)
+                .IsRequired();
 
             builder.HasOne(t => t.Booking)
                 .WithOne(b => b.Ticket);

@@ -4,8 +4,6 @@
 @inject IFestivalService FestivalService
 @inject IArtistService? ArtistService
 @inject NavigationManager Navigation
-@inject ILineupService LineupService
-
 @rendermode InteractiveServer
 
 <style>
@@ -87,6 +85,22 @@
         font-size: 1.2rem;
         margin-top: 3rem;
     }
+
+    .error-message {
+        color: #dc3545;
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #2d1b1b;
+        border-radius: 5px;
+    }
+
+    .success-message {
+        color: #28a745;
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #1b2d1b;
+        border-radius: 5px;
+    }
 </style>
 
 <div class="edit-festival-container">
@@ -104,6 +118,17 @@
     else
     {
         <h3>Edit Festival</h3>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="error-message">@errorMessage</div>
+        }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="success-message">@successMessage</div>
+        }
+
         <EditForm Model="editFestival" OnValidSubmit="HandleEditFestival" FormName="EditFestivalForm">
             <DataAnnotationsValidator />
             <ValidationSummary />
@@ -130,6 +155,12 @@
                 <label for="endDate">End Date</label>
                 <InputDate id="endDate" class="form-control" @bind-Value="editFestival.EndDate" />
                 <ValidationMessage For="@(() => editFestival.EndDate)" />
+            </div>
+
+            <div class="form-group">
+                <label for="capacity">Capacity</label>
+                <InputNumber id="capacity" class="form-control" @bind-Value="editFestival.Capacity" />
+                <ValidationMessage For="@(() => editFestival.Capacity)" />
             </div>
 
             <div class="form-group">
@@ -185,7 +216,17 @@
                 }
             </div>
 
-            <button type="submit" class="btn btn-primary">Update Festival</button>
+            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                @if (isSubmitting)
+                {
+                    <span>Updating Festival...</span>
+
+                }
+                else
+                {
+                    <span>Update Festival</span>
+                }
+            </button>
             <button type="button" class="btn btn-secondary ml-2" @onclick="@(() => Navigation.NavigateTo("/festivals"))">Cancel</button>
         </EditForm>
     }
@@ -203,6 +244,9 @@
     private string artistSearchTerm = "";
     private bool isLoadingArtists = true;
     private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string errorMessage = "";
+    private string successMessage = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -234,6 +278,7 @@
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading festival: {ex.Message}");
+            errorMessage = "Failed to load festival. Please try again.";
         }
         finally
         {
@@ -258,6 +303,7 @@
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading artists: {ex.Message}");
+            errorMessage = "Failed to load artists. Please try again.";
             isLoadingArtists = false;
             StateHasChanged();
         }
@@ -277,6 +323,7 @@
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading festival artists: {ex.Message}");
+            errorMessage = "Failed to load festival artists.";
         }
     }
 
@@ -329,35 +376,32 @@
     {
         try
         {
-            // Add the selected artist IDs to the festival DTO
-            editFestival.ArtistIds = selectedArtists.Select(a => a.Id).ToList();
+            isSubmitting = true;
+            errorMessage = "";
+            successMessage = "";
+            StateHasChanged();
 
-            // Update festival details and artists
+            // First, update the festival basic information
             await FestivalService.UpdateFestivalAsync(FestivalId, editFestival);
 
-            // Clear existing lineup entries for this festival (optional - depends on your business logic)
-            // await LineupService.ClearLineupForFestivalAsync(FestivalId);
+            // Then, update the festival artists using the service method
+            await FestivalService.UpdateFestivalArtistsAsync(FestivalId, selectedArtists.ToList());
 
-            // Add selected artists to lineup
-            foreach (var artist in selectedArtists)
-            {
-                var lineupEntry = new LineupCreateDto
-                {
-                    FestivalId = FestivalId,
-                    ArtistId = artist.Id,
-                    Stage = "Main Stage", // You can customize this
-                    StartTime = editFestival.StartDate.AddHours(12) // You can customize this
-                };
+            successMessage = "Festival updated successfully!";
 
-                await LineupService.AddToLineupAsync(lineupEntry);
-            }
-
-            Navigation.NavigateTo("/festivals");
+            // Wait a moment to show success message, then navigate
+            Navigation.NavigateTo("/festivals", forceLoad: true);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error updating festival: {ex.Message}");
-            // Optionally display error to the user
+            errorMessage = "Failed to update festival. Please try again.";
         }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+        Navigation.NavigateTo("/festivals", forceLoad: true);
     }
 }

@@ -1,0 +1,12 @@
+﻿@page "/buy-ticket/{FestivalId:int}"
+@using ShowTime.BusinessLogic.Abstractions
+@using ShowTime.BusinessLogic.Dtos
+@inject IFestivalService FestivalService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<h3>BuyTicket</h3>
+
+@code {
+	[Parameter] public int FestivalId { get; set; }
+}

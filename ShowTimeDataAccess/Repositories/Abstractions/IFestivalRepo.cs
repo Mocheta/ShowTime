@@ -9,6 +9,11 @@ namespace ShowTime.DataAccess.Repositories.Abstractions
 {
     public interface IFestivalRepo : IRepo<Festival>
     {
-
+        Task<ICollection<Artist>> GetArtistsByFestivalIdAsync(int festivalId);
+        Task<ICollection<Lineup>> GetLineupsByFestivalIdAsync(int festivalId);
+        Task<ICollection<Ticket>> GetTicketsByFestivalIdAsync(int festivalId);
+        Task UpdateFestivalArtistsAsync(int festivalId, ICollection<Artist> artists);
+        Task UpdateFestivalLineupsAsync(int festivalId, ICollection<Lineup> lineups);
+        
     }
 }

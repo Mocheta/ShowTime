@@ -11,7 +11,6 @@ namespace ShowTime.DataAccess.Models
         public int FestivalId { get; set; }
         public int UserId { get; set; }
         public string type { get; set; } = string.Empty; 
-        public int quantity { get; set; } 
         
         public int TicketId { get; set; }
 

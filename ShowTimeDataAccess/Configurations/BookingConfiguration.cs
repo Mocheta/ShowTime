@@ -18,8 +18,6 @@ namespace ShowTime.DataAccess.Configurations
             builder.Property(b => b.type)
                 .IsRequired()
                 .HasMaxLength(50);
-            builder.Property(b => b.quantity)
-                .IsRequired();
             builder.HasOne(b => b.Ticket)
                 .WithOne(t => t.Booking)
                 .HasForeignKey<Booking>(b => b.TicketId)

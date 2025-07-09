@@ -2,6 +2,7 @@
 @using ShowTime.BusinessLogic.Abstractions
 @using ShowTime.BusinessLogic.Dtos
 @inject IArtistService ArtistService
+@inject IFestivalService FestivalService
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
 @inject IJSRuntime JS
@@ -24,7 +25,7 @@
     }
 
     .search-filter-container {
-        max-width: 800px;
+        max-width: 1200px;
         margin: 0 auto 2rem auto;
         padding: 1rem;
         background: #0d0d56;
@@ -193,16 +194,25 @@
         font-size: 1.1rem;
         margin-top: 2rem;
     }
+
+    .loading {
+        text-align: center;
+        color: #20c997;
+        font-size: 1.2rem;
+        margin-top: 3rem;
+    }
 </style>
 
 <div class="artists-container">
     <h2>Artists</h2>
 
-    <button class="btn btn-success mb-3" @onclick="@(() => Navigation.NavigateTo("/add-artist"))">
-        Add New Artist
-    </button>
-
-    @if (allArtists.Count > 0)
+    @if (isLoading)
+    {
+        <div class="loading">
+            🎪 Loading artists...
+        </div>
+    }
+    else if (allArtists.Count > 0)
     {
         <div class="search-filter-container">
             <input type="text"
@@ -224,8 +234,26 @@
                 </div>
 
                 <div class="filter-group">
+                    <label class="filter-label">Filter by Festival:</label>
+                    <select class="filter-select" @bind="selectedFestivalFilter" @bind:after="ApplyFilters">
+                        <option value="">All Festivals</option>
+                        @foreach (var festival in allFestivals)
+                        {
+                            <option value="@festival.Id">@festival.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="filter-group">
                     <label class="filter-label">&nbsp;</label>
                     <button class="clear-filters-btn" @onclick="ClearFilters">Clear Filters</button>
+                </div>
+
+                <div class="filter-group" style="margin-left: auto;">
+                    <label class="filter-label">&nbsp;</label>
+                    <button class="btn btn-success" @onclick="@(() => Navigation.NavigateTo("/add-artist"))">
+                        Add New Artist
+                    </button>
                 </div>
             </div>
         </div>
@@ -233,45 +261,50 @@
         <div class="results-info">
             Showing @filteredArtists.Count of @allArtists.Count artists
         </div>
-    }
 
-    @if (allArtists.Count == 0)
-    {
-        <p class="no-results">No artists registered</p>
-    }
-    else if (filteredArtists.Count == 0)
-    {
-        <p class="no-results">No artists match your search criteria</p>
+        @if (filteredArtists.Count == 0)
+        {
+            <p class="no-results">No artists match your search criteria</p>
+        }
+        else
+        {
+            <div class="artists-grid">
+                @foreach (var artist in filteredArtists)
+                {
+                    <div class="artist-card">
+                        <div class="artist-image-container">
+                            <img src="@artist.Image" alt="@artist.Name" class="artist-image" />
+                            <div class="artist-name-overlay">
+                                <div class="artist-name">@artist.Name</div>
+                                <div class="artist-genre">@artist.Genre</div>
+                            </div>
+                        </div>
+                        <div class="artist-actions">
+                            <AuthorizeView Roles="Admin">
+                                <button class="btn btn-primary me-2" @onclick="@(() => Navigation.NavigateTo($"/edit-artist/{artist.Id}"))">Edit</button>
+                                <button class="btn btn-danger" @onclick="@(() => DeleteArtist(artist.Id))">Delete</button>
+                            </AuthorizeView>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
     }
     else
     {
-        <div class="artists-grid">
-            @foreach (var artist in filteredArtists)
-            {
-                <div class="artist-card">
-                    <div class="artist-image-container">
-                        <img src="@artist.Image" alt="@artist.Name" class="artist-image" />
-                        <div class="artist-name-overlay">
-                            <div class="artist-name">@artist.Name</div>
-                            <div class="artist-genre">@artist.Genre</div>
-                        </div>
-                    </div>
-                    <div class="artist-actions">
-                        <button class="btn btn-primary me-2" @onclick="@(() => Navigation.NavigateTo($"/edit-artist/{artist.Id}"))">Edit</button>
-                        <button class="btn btn-danger" @onclick="@(() => DeleteArtist(artist.Id))">Delete</button>
-                    </div>
-                </div>
-            }
-        </div>
+        <p class="no-results">No artists registered</p>
     }
 </div>
 
 @code {
     private IList<ArtistGetDto> allArtists = new List<ArtistGetDto>();
     private IList<ArtistGetDto> filteredArtists = new List<ArtistGetDto>();
+    private IList<FestivalGetDto> allFestivals = new List<FestivalGetDto>();
     private string searchTerm = "";
     private string selectedGenreFilter = "";
+    private string selectedFestivalFilter = "";
     private IList<string> uniqueGenres = new List<string>();
+    private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -280,11 +313,44 @@
 
     private async Task LoadArtists()
     {
-        allArtists = await ArtistService.GetAllArtistsAsync();
-        filteredArtists = allArtists;
+        try
+        {
+            isLoading = true;
+            allArtists = await ArtistService.GetAllArtistsAsync();
+            allFestivals = await FestivalService.GetAllFestivalsAsync();
+            filteredArtists = allArtists;
 
-        // Populate unique genres for filter dropdown
-        uniqueGenres = allArtists.Select(a => a.Genre).Distinct().OrderBy(g => g).ToList();
+            // Get unique festivals that have artists
+            var festivalsWithArtists = new List<FestivalGetDto>();
+            foreach (var festival in allFestivals)
+            {
+                try
+                {
+                    var artists = await FestivalService.GetFestivalArtistsAsync(festival.Id);
+                    if (artists != null && artists.Any())
+                    {
+                        festivalsWithArtists.Add(festival);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error loading artists for festival {festival.Id}: {ex.Message}");
+                }
+            }
+            allFestivals = festivalsWithArtists;
+
+            // Populate unique genres for filter dropdown
+            uniqueGenres = allArtists.Select(a => a.Genre).Distinct().OrderBy(g => g).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading artists: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
     }
 
     private void OnSearchInput(ChangeEventArgs e)
@@ -293,29 +359,51 @@
         ApplyFilters();
     }
 
-    private void ApplyFilters()
+    private async Task ApplyFilters()
     {
-        filteredArtists = allArtists.Where(artist =>
+        try
         {
-            // Search term filter (searches both name and genre)
-            bool matchesSearch = string.IsNullOrEmpty(searchTerm) ||
-                                artist.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                                artist.Genre.Contains(searchTerm, StringComparison.OrdinalIgnoreCase);
+            var artistsToShow = allArtists.AsEnumerable();
+
+            // Search term filter
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                artistsToShow = artistsToShow.Where(artist =>
+                    artist.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    artist.Genre.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+            }
 
             // Genre filter
-            bool matchesGenre = string.IsNullOrEmpty(selectedGenreFilter) ||
-                               artist.Genre.Equals(selectedGenreFilter, StringComparison.OrdinalIgnoreCase);
+            if (!string.IsNullOrEmpty(selectedGenreFilter))
+            {
+                artistsToShow = artistsToShow.Where(artist =>
+                    artist.Genre.Equals(selectedGenreFilter, StringComparison.OrdinalIgnoreCase));
+            }
 
-            return matchesSearch && matchesGenre;
-        }).ToList();
+            // Festival filter
+            if (!string.IsNullOrEmpty(selectedFestivalFilter))
+            {
+                var festivalId = int.Parse(selectedFestivalFilter);
+                var festivalArtists = await FestivalService.GetFestivalArtistsAsync(festivalId);
+                var festivalArtistIds = festivalArtists?.Select(a => a.Id).ToHashSet() ?? new HashSet<int>();
 
-        StateHasChanged();
+                artistsToShow = artistsToShow.Where(artist => festivalArtistIds.Contains(artist.Id));
+            }
+
+            filteredArtists = artistsToShow.ToList();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error applying filters: {ex.Message}");
+        }
     }
 
     private void ClearFilters()
     {
         searchTerm = "";
         selectedGenreFilter = "";
+        selectedFestivalFilter = "";
         filteredArtists = allArtists;
         StateHasChanged();
     }
@@ -325,9 +413,16 @@
         bool confirmed = await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete this artist?");
         if (confirmed)
         {
-            await ArtistService.DeleteArtistAsync(id);
-            await LoadArtists();
-            ApplyFilters(); // Reapply filters after deletion
+            try
+            {
+                await ArtistService.DeleteArtistAsync(id);
+                await LoadArtists();
+                await ApplyFilters(); // Reapply filters after deletion
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting artist: {ex.Message}");
+            }
         }
     }
 }

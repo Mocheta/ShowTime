@@ -79,39 +79,77 @@
         cursor: pointer;
         font-weight: bold;
     }
+
+    .error-message {
+        color: #dc3545;
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #2d1b1b;
+        border-radius: 5px;
+    }
+
+    .success-message {
+        color: #28a745;
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #1b2d1b;
+        border-radius: 5px;
+    }
 </style>
 
 <div class="add-festival-container">
     <h3>Add Festival</h3>
 
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="error-message">@errorMessage</div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="success-message">@successMessage</div>
+    }
+
     <EditForm Model="newFestival" OnValidSubmit="HandleAddFestival" FormName="AddFestivalForm">
         <DataAnnotationsValidator />
         <ValidationSummary />
+
         <div class="form-group">
             <label for="name">Name</label>
             <InputText id="name" class="form-control" @bind-Value="newFestival.Name" />
             <ValidationMessage For="@(() => newFestival.Name)" />
         </div>
+
         <div class="form-group">
             <label for="location">Location</label>
             <InputText id="location" class="form-control" @bind-Value="newFestival.Location" />
             <ValidationMessage For="@(() => newFestival.Location)" />
         </div>
+
         <div class="form-group">
             <label for="startDate">Start Date</label>
             <InputDate id="startDate" class="form-control" @bind-Value="newFestival.StartDate" />
             <ValidationMessage For="@(() => newFestival.StartDate)" />
         </div>
+
         <div class="form-group">
             <label for="endDate">End Date</label>
             <InputDate id="endDate" class="form-control" @bind-Value="newFestival.EndDate" />
             <ValidationMessage For="@(() => newFestival.EndDate)" />
         </div>
+
         <div class="form-group">
             <label for="splashArt">Splash Art URL</label>
             <InputText id="splashArt" class="form-control" @bind-Value="newFestival.SplashArt" />
             <ValidationMessage For="@(() => newFestival.SplashArt)" />
         </div>
+
+        <div class="form-group">
+            <label for="capacity">Capacity</label>
+            <InputNumber id="capacity" class="form-control" @bind-Value="newFestival.Capacity" />
+            <ValidationMessage For="@(() => newFestival.Capacity)" />
+        </div>
+
         <div class="artists-section">
             <h4>Select Artists</h4>
 
@@ -157,7 +195,17 @@
                 </div>
             }
         </div>
-        <button type="submit" class="btn btn-primary">Add Festival</button>
+
+        <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+            @if (isSubmitting)
+            {
+                <span>Adding Festival...</span>
+            }
+            else
+            {
+                <span>Add Festival</span>
+            }
+        </button>
         <button type="button" class="btn btn-secondary ml-2" @onclick="@(() => Navigation.NavigateTo("/festivals"))">Cancel</button>
     </EditForm>
 </div>
@@ -171,6 +219,9 @@
     private List<ArtistGetDto> selectedArtists = new List<ArtistGetDto>();
     private string artistSearchTerm = "";
     private bool isLoadingArtists = true;
+    private bool isSubmitting = false;
+    private string errorMessage = "";
+    private string successMessage = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -190,6 +241,7 @@
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading artists: {ex.Message}");
+            errorMessage = "Failed to load artists. Please try again.";
             isLoadingArtists = false;
             StateHasChanged();
         }
@@ -244,17 +296,49 @@
     {
         try
         {
-            // Add the selected artist IDs to the festival DTO
-            newFestival.ArtistIds = selectedArtists.Select(a => a.Id).ToList();
+            isSubmitting = true;
+            errorMessage = "";
+            successMessage = "";
+            StateHasChanged();
 
-            // Create the festival with associated artists
+            // First, create the festival
             await FestivalService.AddFestivalAsync(newFestival);
 
+            // If artists were selected, we need to get the created festival's ID
+            // Since AddFestivalAsync doesn't return the created festival, we'll need to find it
+            // This is a limitation of the current service design
+            if (selectedArtists.Any())
+            {
+                // Get all festivals and find the one we just created
+                // This is not ideal but works with the current service structure
+                var allFestivals = await FestivalService.GetAllFestivalsAsync();
+                var createdFestival = allFestivals
+                    .Where(f => f.Name == newFestival.Name && f.Location == newFestival.Location)
+                    .OrderByDescending(f => f.Id)
+                    .FirstOrDefault();
+
+                if (createdFestival != null)
+                {
+                    // Update the festival with the selected artists
+                    await FestivalService.UpdateFestivalArtistsAsync(createdFestival.Id, selectedArtists);
+                }
+            }
+
+            successMessage = "Festival added successfully!";
+
+            // Wait a moment to show success message, then navigate
+            await Task.Delay(1500);
             Navigation.NavigateTo("/festivals");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error adding festival: {ex.Message}");
+            errorMessage = "Failed to add festival. Please try again.";
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
         }
     }
 }

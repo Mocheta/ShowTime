@@ -15,5 +15,6 @@ namespace ShowTime.DataAccess.Models
 
         public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
         public ICollection<Festival> Festivals { get; set; } = new List<Festival>();
+        public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
     }
 }

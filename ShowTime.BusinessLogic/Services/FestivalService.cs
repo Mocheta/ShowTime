@@ -8,14 +8,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
 namespace ShowTime.BusinessLogic.Services
 {
     public class FestivalService : IFestivalService
     {
         private readonly IRepo<Festival> _festivalRepository;
-        public FestivalService(IRepo<Festival> festivalRepository)
+        private readonly IRepo<Artist> _artistRepository;
+        public FestivalService(IRepo<Festival> festivalRepository, IRepo<Artist> artistRepository)
         {
             _festivalRepository = festivalRepository ?? throw new ArgumentNullException(nameof(festivalRepository));
+            _artistRepository = artistRepository ?? throw new ArgumentNullException(nameof(artistRepository));
         }
 
         public async Task<FestivalGetDto> GetFestivalByIdAsync(int id)
@@ -184,5 +187,89 @@ namespace ShowTime.BusinessLogic.Services
                 throw new InvalidOperationException("An unexpected error occurred while fetching the festival artists", ex);
             }
         }
+        public async Task<IList<LineupGetDto>> GetFestivalLineupsAsync(int id)
+        {
+            try
+            {
+                var festival = await _festivalRepository.GetByIdAsync(id);
+                if (festival == null)
+                {
+                    throw new KeyNotFoundException($"Festival with ID {id} not found.");
+                }
+                // Now festival.Lineups should be populated thanks to the modified GenericImplement
+                return festival.Lineups.Select(lineup => new LineupGetDto
+                {
+                    FestivalId = lineup.FestivalId,
+                    ArtistId = lineup.ArtistId,
+                    StartTime = lineup.StartTime,
+                    Stage = lineup.Stage,
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching lineups for festival ID {id}: {ex.Message}");
+                throw new InvalidOperationException("An unexpected error occurred while fetching the festival lineups", ex);
+            }
+        }
+        public async Task UpdateFestivalArtistsAsync(int festivalId, IList<ArtistGetDto> artists)
+        {
+                try
+                {
+                    var festival = await _festivalRepository.GetByIdAsync(festivalId);
+                    if (festival == null)
+                    {
+                        throw new KeyNotFoundException($"Festival with ID {festivalId} not found.");
+                    }
+
+                    // Clear existing artists first
+                    festival.Artists.Clear();
+
+                    // Get the artist IDs and fetch them from the repository to avoid tracking issues
+                    var artistIds = artists.Select(a => a.Id).ToList();
+
+                    // Fetch artists from the repository (they'll be properly tracked)
+                    foreach (var artistId in artistIds)
+                    {
+                        var existingArtist = await _artistRepository.GetByIdAsync(artistId);
+                        if (existingArtist != null)
+                        {
+                            festival.Artists.Add(existingArtist);
+                        }
+                    }
+
+                    await _festivalRepository.UpdateAsync(festival);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error updating artists for festival ID {festivalId}: {ex.Message}");
+                    throw new InvalidOperationException("An unexpected error occurred while updating the festival artists", ex);
+                }
+            }
+        public async Task AddFestivalLineupAsync(int festivalId, LineupCreateDto lineup)
+        {
+            try
+            {
+                var festival = await _festivalRepository.GetByIdAsync(festivalId);
+                if (festival == null)
+                {
+                    throw new KeyNotFoundException($"Festival with ID {festivalId} not found.");
+                }
+                var newLineup = new Lineup
+                {
+                    FestivalId = festivalId,
+                    ArtistId = lineup.ArtistId,
+                    StartTime = lineup.StartTime,
+                    Stage = lineup.Stage
+                };
+                festival.Lineups.Add(newLineup);
+                await _festivalRepository.UpdateAsync(festival);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error adding lineup for festival ID {festivalId}: {ex.Message}");
+                throw new InvalidOperationException("An unexpected error occurred while adding the festival lineup", ex);
+            }
+        }
+
     }
     }

@@ -17,14 +17,63 @@ namespace ShowTime.DataAccess.Repositories.Implementations
         {
             _festivals = context.Set<Festival>();
         }
-        public async Task<IList<Artist>> GetAllArtistsForFestivalAsync(int festivalId)
+        public override async Task<IEnumerable<Festival>> GetAllAsync()
         {
-                return await _festivals
-                    .Where(f => f.Id == festivalId)
-                    .SelectMany(f => f.Artists)
-                    .ToListAsync();
+            return await _festivals
+                .Include(f => f.Artists)
+                .Include(f => f.Lineups)
+                .Include(f => f.Tickets)
+                .ToListAsync();
+        }
+        public override async Task<Festival?> GetByIdAsync(int id)
+        {
+            return await _festivals
+                .Include(f => f.Artists)
+                .Include(f => f.Lineups)
+                .Include(f => f.Tickets)
+                .FirstOrDefaultAsync(f => f.Id == id);
+        }
+        public async Task<ICollection<Artist>> GetArtistsByFestivalIdAsync(int festivalId)
+        {
+            return await _festivals
+                .Where(f => f.Id == festivalId)
+                .SelectMany(f => f.Artists)
+                .ToListAsync();
+        }
+        public async Task<ICollection<Lineup>> GetLineupsByFestivalIdAsync(int festivalId)
+        {
+            return await _festivals
+                .Where(f => f.Id == festivalId)
+                .SelectMany(f => f.Lineups)
+                .ToListAsync();
+        }
+        public async Task<ICollection<Ticket>> GetTicketsByFestivalIdAsync(int festivalId)
+        {
+            return await _festivals
+                .Where(f => f.Id == festivalId)
+                .SelectMany(f => f.Tickets)
+                .ToListAsync();
+        }
+        public async Task UpdateFestivalArtistsAsync(int festivalId, ICollection<Artist> artists)
+        {
+            var festival = await GetByIdAsync(festivalId);
+            if (festival != null)
+            {
+                festival.Artists = artists;
+                await UpdateAsync(festival);
+            }
+        }
+        public async Task UpdateFestivalLineupsAsync(int festivalId, ICollection<Lineup> lineups)
+        {
+            var festival = await GetByIdAsync(festivalId);
+            if (festival != null)
+            {
+                festival.Lineups = lineups;
+                await UpdateAsync(festival);
+            }
+
 
         }
-
     }
+
 }

@@ -1,6 +1,7 @@
 ﻿@page "/festivals"
 @using ShowTime.BusinessLogic.Abstractions
 @using ShowTime.BusinessLogic.Dtos
+@using Microsoft.AspNetCore.Authorization
 @inject IFestivalService FestivalService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
@@ -135,7 +136,7 @@
     .artists-section {
         background: rgba(255,255,255,0.05);
         border-radius: 12px;
-        padding: 1rem;
+        padding: 0.75rem;
         margin-top: 1rem;
         border: 1px solid rgba(255,255,255,0.1);
     }
@@ -143,8 +144,8 @@
     .artists-title {
         color: #20c997;
         font-weight: bold;
-        margin-bottom: 0.75rem;
-        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+        font-size: 1rem;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -152,37 +153,64 @@
 
     .artists-grid {
         display: grid;
-        /* Reverting to a more flexible grid for artists */
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-        gap: 0.75rem;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.4rem;
     }
 
     .artist-card {
+        position: relative;
         background: rgba(255,255,255,0.08);
-        border-radius: 8px;
-        padding: 0.75rem;
-        text-align: center;
+        border-radius: 6px;
+        overflow: hidden;
         transition: all 0.3s ease;
         border: 1px solid rgba(255,255,255,0.1);
+        height: 80px;
+        width: 100%;
     }
 
         .artist-card:hover {
-            background: rgba(255,255,255,0.12);
             transform: translateY(-2px);
             border-color: #20c997;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
         }
+
+    .artist-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+
+    .artist-card:hover .artist-image {
+        transform: scale(1.05);
+    }
+
+    .artist-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(transparent, rgba(0,0,0,0.95));
+        color: white;
+        padding: 6px 8px;
+        text-align: center;
+    }
 
     .artist-name {
         font-weight: bold;
         color: #ffffff;
-        margin-bottom: 0.25rem;
-        font-size: 0.9rem;
+        margin-bottom: 0.05rem;
+        font-size: 0.75rem;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.9);
+        line-height: 1;
     }
 
     .artist-genre {
-        color: #b8b8b8;
-        font-size: 0.8rem;
+        color: #d0d0d0;
+        font-size: 0.65rem;
         font-style: italic;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.9);
+        line-height: 1;
     }
 
     .no-artists {
@@ -194,24 +222,6 @@
         border-radius: 12px;
         border: 1px solid rgba(255,255,255,0.1);
     }
-
-    .more-artists {
-        background: rgba(32, 201, 151, 0.2);
-        border: 1px dashed #20c997;
-        color: #20c997;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.8rem;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-        .more-artists:hover {
-            background: rgba(32, 201, 151, 0.3);
-            transform: translateY(-2px);
-        }
 
     .no-festivals {
         text-align: center;
@@ -249,11 +259,9 @@
         right: 10px;
         display: flex;
         gap: 8px;
-        /* Ensure buttons are above content */
         z-index: 10;
     }
 
-    /* Redefining action buttons to remove Bootstrap conflict */
     .action-btn {
         border: none;
         color: white;
@@ -262,25 +270,25 @@
         cursor: pointer;
         font-size: 0.9rem;
         transition: all 0.3s ease;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3); /* Add subtle shadow */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
     .edit-btn {
-        background-color: #28a745; /* Green */
+        background-color: #28a745;
     }
 
         .edit-btn:hover {
-            background-color: #218838; /* Darker green on hover */
+            background-color: #218838;
             transform: translateY(-1px);
             box-shadow: 0 3px 6px rgba(0,0,0,0.4);
         }
 
     .delete-btn {
-        background-color: #dc3545; /* Red */
+        background-color: #dc3545;
     }
 
         .delete-btn:hover {
-            background-color: #c82333; /* Darker red on hover */
+            background-color: #c82333;
             transform: translateY(-1px);
             box-shadow: 0 3px 6px rgba(0,0,0,0.4);
         }
@@ -288,7 +296,6 @@
 
 <div class="festivals-container">
     <h2>🎵 Music Festivals</h2>
-
     <button class="add-festival-btn" @onclick="@(() => Navigation.NavigateTo("/add-festival"))">
         ➕ Add New Festival
     </button>
@@ -313,10 +320,9 @@
             {
                 <div class="festival-card">
                     <div class="festival-actions">
-                        <AuthorizeView Roles="Admin">
-                            <button class="action-btn edit-btn" @onclick="@(() => Navigation.NavigateTo($"/edit-festival/{festival.Id}"))">Edit</button>
-                            <button class="action-btn delete-btn" @onclick="@(() => DeleteFestival(festival.Id))">Delete</button>
-						</AuthorizeView>
+                        <button class="action-btn edit-btn" @onclick="@(() => Navigation.NavigateTo($"/edit-festival/{festival.Id}"))">Edit</button>
+                        <button class="action-btn delete-btn" @onclick="@(() => DeleteFestival(festival.Id))">Delete</button>
+                        <button class="action-btn edit-btn" @onclick="@(() => Navigation.NavigateTo($"/buy-ticket/{festival.Id}"))">Buy Ticket</button>
                     </div>
 
                     <div class="festival-image-container">
@@ -359,22 +365,17 @@
                                 <div class="artists-grid">
                                     @{
                                         var festivalArtists = GetFestivalArtists(festival.Id);
-                                        var artistsToShow = festivalArtists.Take(3).ToList();
-                                        var remainingCount = festivalArtists.Count - 3;
+                                        var artistsToShow = festivalArtists.Take(2).ToList();
                                     }
 
                                     @foreach (var artist in artistsToShow)
                                     {
                                         <div class="artist-card">
-                                            <div class="artist-name">@artist.Name</div>
-                                            <div class="artist-genre">@artist.Genre</div>
-                                        </div>
-                                    }
-
-                                    @if (remainingCount > 0)
-                                    {
-                                        <div class="artist-card more-artists">
-                                            +@remainingCount more
+                                            <img src="@artist.Image" alt="@artist.Name" class="artist-image" />
+                                            <div class="artist-overlay">
+                                                <div class="artist-name">@artist.Name</div>
+                                                <div class="artist-genre">@artist.Genre</div>
+                                            </div>
                                         </div>
                                     }
                                 </div>
@@ -392,7 +393,6 @@
         </div>
     }
 </div>
-
 
 @code {
     private IList<FestivalGetDto> festivals = new List<FestivalGetDto>();
@@ -438,8 +438,6 @@
         {
             foreach (var festival in festivals)
             {
-                // Assuming you have a method to get artists by festival ID
-                // Replace this with your actual method name
                 var artists = await FestivalService.GetFestivalArtistsAsync(festival.Id);
                 if (artists != null)
                 {
@@ -458,7 +456,6 @@
         festivalArtists.TryGetValue(festivalId, out var artists);
         return artists ?? new List<ArtistGetDto>();
     }
-    
 
     private async Task DeleteFestival(int festivalId)
     {
@@ -467,7 +464,7 @@
             try
             {
                 await FestivalService.DeleteFestivalAsync(festivalId);
-                await LoadFestivals(); // Refresh the list
+                await LoadFestivals();
             }
             catch (Exception ex)
             {
@@ -475,5 +472,4 @@
             }
         }
     }
-
 }
