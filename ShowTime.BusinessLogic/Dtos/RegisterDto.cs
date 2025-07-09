@@ -22,7 +22,7 @@ namespace ShowTime.BusinessLogic.Dtos
         [Compare(nameof(Password), ErrorMessage = "Passwords do not match.")]
         public string ConfirmPassword { get; set; } = String.Empty;
 
-        public Role Role { get; set; } = Role.Admin;
+        public Role Role { get; set; } = Role.User;
 
     }
 }

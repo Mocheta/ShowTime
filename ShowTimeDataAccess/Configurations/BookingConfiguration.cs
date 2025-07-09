@@ -20,7 +20,11 @@ namespace ShowTime.DataAccess.Configurations
                 .HasMaxLength(50);
             builder.Property(b => b.quantity)
                 .IsRequired();
-            
+            builder.HasOne(b => b.Ticket)
+                .WithOne(t => t.Booking)
+                .HasForeignKey<Booking>(b => b.TicketId)
+                .OnDelete(DeleteBehavior.NoAction); // Assuming you want to delete Booking when Ticket is deleted
+
             // Assuming Festival and User are configured elsewhere
             //builder.HasOne<Festival>()
             //    .WithMany()
