@@ -82,40 +82,39 @@
 </style>
 
 <div class="add-festival-container">
-	<h3>AddFestival</h3>
+    <h3>Add Festival</h3>
 
-
-	<EditForm Model="newFestival" OnValidSubmit="HandleAddFestival" FormName="AddFestivalForm">
-		<DataAnnotationsValidator />
-		<ValidationSummary />
-		<div class="form-group">
-			<label for="name">Name</label>
-			<InputText id="name" class="form-control" @bind-Value="newFestival.Name" />
-			<ValidationMessage For="@(() => newFestival.Name)" />
-		</div>
-		<div class="form-group">
-			<label for="location">Location</label>
-			<InputText id="location" class="form-control" @bind-Value="newFestival.Location" />
-			<ValidationMessage For="@(() => newFestival.Location)" />
-		</div>
-		<div class="form-group">
-			<label for="startDate">Start Date</label>
-			<InputDate id="startDate" class="form-control" @bind-Value="newFestival.StartDate" />
-			<ValidationMessage For="@(() => newFestival.StartDate)" />
-		</div>
-		<div class="form-group">
-			<label for="endDate">End Date</label>
-			<InputDate id="endDate" class="form-control" @bind-Value="newFestival.EndDate" />
-			<ValidationMessage For="@(() => newFestival.EndDate)" />
-		</div>
-		<div class="form-group">
-			<label for="splashArt">Splash Art URL</label>
-			<InputText id="splashArt" class="form-control" @bind-Value="newFestival.SplashArt" />
-			<ValidationMessage For="@(() => newFestival.SplashArt)" />
-		</div>
+    <EditForm Model="newFestival" OnValidSubmit="HandleAddFestival" FormName="AddFestivalForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-group">
+            <label for="name">Name</label>
+            <InputText id="name" class="form-control" @bind-Value="newFestival.Name" />
+            <ValidationMessage For="@(() => newFestival.Name)" />
+        </div>
+        <div class="form-group">
+            <label for="location">Location</label>
+            <InputText id="location" class="form-control" @bind-Value="newFestival.Location" />
+            <ValidationMessage For="@(() => newFestival.Location)" />
+        </div>
+        <div class="form-group">
+            <label for="startDate">Start Date</label>
+            <InputDate id="startDate" class="form-control" @bind-Value="newFestival.StartDate" />
+            <ValidationMessage For="@(() => newFestival.StartDate)" />
+        </div>
+        <div class="form-group">
+            <label for="endDate">End Date</label>
+            <InputDate id="endDate" class="form-control" @bind-Value="newFestival.EndDate" />
+            <ValidationMessage For="@(() => newFestival.EndDate)" />
+        </div>
+        <div class="form-group">
+            <label for="splashArt">Splash Art URL</label>
+            <InputText id="splashArt" class="form-control" @bind-Value="newFestival.SplashArt" />
+            <ValidationMessage For="@(() => newFestival.SplashArt)" />
+        </div>
         <div class="artists-section">
             <h4>Select Artists</h4>
-            
+
             @if (availableArtists != null && availableArtists.Any())
             {
                 <div class="form-group">
@@ -127,7 +126,7 @@
                     @foreach (var artist in filteredArtists)
                     {
                         <div class="artist-item">
-                            <input type="checkbox" class="artist-checkbox" 
+                            <input type="checkbox" class="artist-checkbox"
                                    checked="@IsArtistSelected(artist.Id)"
                                    @onchange="@((e) => ToggleArtistSelection(artist, e.Value as bool? ?? false))" />
                             <span>@artist.Name (@artist.Genre)</span>
@@ -157,10 +156,10 @@
                     }
                 </div>
             }
-            </div>
-		<button type="submit" class="btn btn-primary">Add Festival</button>
-            <button type="button" class="btn btn-secondary ml-2" @onclick="@(() => Navigation.NavigateTo("/festivals"))">Cancel</button>
-	</EditForm>
+        </div>
+        <button type="submit" class="btn btn-primary">Add Festival</button>
+        <button type="button" class="btn btn-secondary ml-2" @onclick="@(() => Navigation.NavigateTo("/festivals"))">Cancel</button>
+    </EditForm>
 </div>
 
 @code {
@@ -245,9 +244,12 @@
     {
         try
         {
+            // Add the selected artist IDs to the festival DTO
             newFestival.ArtistIds = selectedArtists.Select(a => a.Id).ToList();
 
+            // Create the festival with associated artists
             await FestivalService.AddFestivalAsync(newFestival);
+
             Navigation.NavigateTo("/festivals");
         }
         catch (Exception ex)
@@ -255,5 +257,4 @@
             Console.WriteLine($"Error adding festival: {ex.Message}");
         }
     }
-
 }

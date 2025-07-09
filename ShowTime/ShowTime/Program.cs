@@ -48,6 +48,9 @@ builder.Services.AddTransient<IRepo<User>, GenericImplement<User>>();
 builder.Services.AddTransient<IUserRepo, UserImplement>();
 builder.Services.AddTransient<IUserService, UserService>();
 
+builder.Services.AddTransient<ILineupRepo, LineupImplement>();
+builder.Services.AddTransient<ILineupService, LineupService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

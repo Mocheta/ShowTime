@@ -1,107 +1,95 @@
-﻿using ShowTime.DataAccess;
+﻿using Microsoft.EntityFrameworkCore;
+using ShowTime.BusinessLogic.Abstractions;
+using ShowTime.BusinessLogic.Dtos;
+using ShowTime.DataAccess;
 using ShowTime.DataAccess.Models;
-using Microsoft.EntityFrameworkCore;
+using ShowTime.DataAccess.Repositories.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using ShowTime.BusinessLogic.Abstractions;
 
 namespace ShowTime.BusinessLogic.Services
 {
-    
+
     public class LineupService : ILineupService
     {
-        private readonly ShowTimeDBContext _context;
+        private readonly ILineupRepo _lineupRepository;
 
-        public LineupService(ShowTimeDBContext context)
+        public LineupService(ILineupRepo lineupRepository)
         {
-            _context = context;
+            _lineupRepository = lineupRepository;
         }
 
-        public async Task AddArtistToFestivalAsync(int festivalId, int artistId, string stage, DateTime startTime)
+        public async Task<IEnumerable<LineupGetDto>> GetLineupAsync(int festivalId)
         {
-            // Check if the relationship already exists
-            var existingLineup = await _context.Lineups
-                .FirstOrDefaultAsync(l => l.FestivalId == festivalId && l.ArtistId == artistId);
-
-            if (existingLineup != null)
+            try
             {
-                throw new InvalidOperationException("Artist is already added to this festival.");
+                var lineup = await _lineupRepository.GetByFestivalIdAsync(festivalId);
+                return lineup.Select(l => new LineupGetDto
+                {
+                    FestivalId = l.FestivalId,
+                    ArtistName = l.Artist.Name,
+                    Stage = l.Stage,
+                    StartTime = l.StartTime
+                }).ToList();
             }
-
-            // Verify festival and artist exist
-            var festival = await _context.Festivals.FindAsync(festivalId);
-            var artist = await _context.Artists.FindAsync(artistId);
-
-            if (festival == null)
-                throw new ArgumentException("Festival not found.");
-            if (artist == null)
-                throw new ArgumentException("Artist not found.");
-
-            var lineup = new Lineup
+            catch (Exception ex)
             {
-                FestivalId = festivalId,
-                ArtistId = artistId,
-                Stage = stage,
-                StartTime = startTime
+                throw new Exception($"Unable to retrieve the lineup: {ex.Message}");
+            }
+        }
+
+        public async Task AddToLineupAsync(LineupCreateDto lineupCreateDto)
+        {
+            var entity = new Lineup
+            {
+                FestivalId = lineupCreateDto.FestivalId,
+                ArtistId = lineupCreateDto.ArtistId,
+                Stage = lineupCreateDto.Stage,
+                StartTime = lineupCreateDto.StartTime
             };
-
-            _context.Lineups.Add(lineup);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task RemoveArtistFromFestivalAsync(int festivalId, int artistId)
-        {
-            var lineup = await _context.Lineups
-                .FirstOrDefaultAsync(l => l.FestivalId == festivalId && l.ArtistId == artistId);
-
-            if (lineup != null)
+            try
             {
-                _context.Lineups.Remove(lineup);
-                await _context.SaveChangesAsync();
+                await _lineupRepository.AddLineupAsync(entity);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Unable to add artist to lineup: {ex.Message}");
             }
         }
 
-        public async Task<IList<Artist>> GetFestivalArtistsAsync(int festivalId)
+        public async Task UpdateLineupAsync(LineupCreateDto lineupCreateDto)
         {
-            return await _context.Lineups
-                .Where(l => l.FestivalId == festivalId)
-                .Include(l => l.Artist)
-                .Select(l => l.Artist)
-                .ToListAsync();
+            try
+            {
+                var entity = new Lineup
+                {
+                    FestivalId = lineupCreateDto.FestivalId,
+                    ArtistId = lineupCreateDto.ArtistId,
+                    Stage = lineupCreateDto.Stage,
+                    StartTime = lineupCreateDto.StartTime
+                };
+
+                await _lineupRepository.UpdateLineupAsync(entity);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Unable to update lineup: {ex.Message}");
+            }
         }
 
-        public async Task<IList<Festival>> GetArtistFestivalsAsync(int artistId)
+        public async Task RemoveFromLineupAsync(int festivalId, int artistId)
         {
-            return await _context.Lineups
-                .Where(l => l.ArtistId == artistId)
-                .Include(l => l.Festival)
-                .Select(l => l.Festival)
-                .ToListAsync();
-        }
-
-        public async Task<Lineup?> GetLineupAsync(int festivalId, int artistId)
-        {
-            return await _context.Lineups
-                .Include(l => l.Festival)
-                .Include(l => l.Artist)
-                .FirstOrDefaultAsync(l => l.FestivalId == festivalId && l.ArtistId == artistId);
-        }
-
-        public async Task UpdateLineupAsync(int festivalId, int artistId, string stage, DateTime startTime)
-        {
-            var lineup = await _context.Lineups
-                .FirstOrDefaultAsync(l => l.FestivalId == festivalId && l.ArtistId == artistId);
-
-            if (lineup == null)
-                throw new ArgumentException("Lineup not found.");
-
-            lineup.Stage = stage;
-            lineup.StartTime = startTime;
-
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _lineupRepository.DeleteLineupAsync(festivalId, artistId);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Unable to remove artist from lineup: {ex.Message}");
+            }
         }
     }
-}
+    }

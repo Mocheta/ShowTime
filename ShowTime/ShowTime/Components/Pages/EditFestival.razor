@@ -4,6 +4,8 @@
 @inject IFestivalService FestivalService
 @inject IArtistService? ArtistService
 @inject NavigationManager Navigation
+@inject ILineupService LineupService
+
 @rendermode InteractiveServer
 
 <style>
@@ -193,7 +195,7 @@
     [Parameter] public int FestivalId { get; set; }
 
     [SupplyParameterFromForm]
-    private FestivalUpdateDto editFestival { get; set; } = new FestivalUpdateDto();
+    private FestivalUpdateDto editFestival { get; set; } = new();
 
     private IList<ArtistGetDto> availableArtists = new List<ArtistGetDto>();
     private IList<ArtistGetDto> filteredArtists = new List<ArtistGetDto>();
@@ -224,7 +226,7 @@
                     Location = festival.Location,
                     StartDate = festival.StartDate,
                     EndDate = festival.EndDate,
-					Capacity = festival.Capacity,
+                    Capacity = festival.Capacity,
                     SplashArt = festival.SplashArt
                 };
             }
@@ -330,7 +332,26 @@
             // Add the selected artist IDs to the festival DTO
             editFestival.ArtistIds = selectedArtists.Select(a => a.Id).ToList();
 
+            // Update festival details and artists
             await FestivalService.UpdateFestivalAsync(FestivalId, editFestival);
+
+            // Clear existing lineup entries for this festival (optional - depends on your business logic)
+            // await LineupService.ClearLineupForFestivalAsync(FestivalId);
+
+            // Add selected artists to lineup
+            foreach (var artist in selectedArtists)
+            {
+                var lineupEntry = new LineupCreateDto
+                {
+                    FestivalId = FestivalId,
+                    ArtistId = artist.Id,
+                    Stage = "Main Stage", // You can customize this
+                    StartTime = editFestival.StartDate.AddHours(12) // You can customize this
+                };
+
+                await LineupService.AddToLineupAsync(lineupEntry);
+            }
+
             Navigation.NavigateTo("/festivals");
         }
         catch (Exception ex)
@@ -339,5 +360,4 @@
             // Optionally display error to the user
         }
     }
-
 }
