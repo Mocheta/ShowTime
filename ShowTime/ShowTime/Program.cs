@@ -13,6 +13,8 @@ using ShowTime.DataAccess.Repositories.Implementations;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddHttpContextAccessor();
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -43,10 +45,15 @@ builder.Services.AddTransient<IArtistService, ArtistService>();
 
 builder.Services.AddTransient<IRepo<Festival>, GenericImplement<Festival>>();
 builder.Services.AddTransient<IFestivalService, FestivalService>();
+builder.Services.AddTransient<IFestivalRepo, FestivalImplement>();
 
 builder.Services.AddTransient<IRepo<User>, GenericImplement<User>>();
 builder.Services.AddTransient<IUserRepo, UserImplement>();
 builder.Services.AddTransient<IUserService, UserService>();
+
+builder.Services.AddTransient<IRepo<Ticket>, GenericImplement<Ticket>>();
+builder.Services.AddTransient<IRepo<Booking>, GenericImplement<Booking>>();
+builder.Services.AddTransient<ITicketService, TicketService>();
 
 
 var app = builder.Build();

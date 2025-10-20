@@ -78,5 +78,68 @@ namespace ShowTime.BusinessLogic.Services
             newUser.Password = _passwordHasher.HashPassword(newUser, registerDto.Password);
             await _userRepo.AddAsync(newUser);
         }
+        public async Task<int> GetUserIdByEmailAsync(string? email)
+        {
+            try
+            {
+                return await _userRepo.GetUserIdByEmailAsync(email);
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"Error occured while trying to get user id by email: {e.Message}");
+            }
+        }
+        public async Task BookTicketAsync(int userId, int ticketId)
+        {
+            try
+            {
+                await _userRepo.BookTicketAsync(userId, ticketId);
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"Error occured while trying to book ticket: {e.Message}");
+            }
+        }
+        public async Task<List<BookingGetDto>> GetUserBookings(int userId)
+        {
+            try
+            {
+                var bookings = await _userRepo.GetBookingsByUserIdAsync(userId);
+                return bookings.Select(userBooking => new BookingGetDto()
+                {
+                    Id = userBooking.Id,
+                    UserId = userBooking.UserId,
+                    TicketId = userBooking.TicketId
+                }).ToList();
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"Error occured while trying to get user bookings: {e.Message}");
+            }
+        }
+        public async Task<List<TicketGetDto>> GetUserTickets(int userId)
+        {
+            try
+            {
+                var tickets = await _userRepo.GetTicketsByUserIdAsync(userId);
+                return tickets.Select(t => new TicketGetDto()
+                {
+                    Id = t.Id,
+                    FestivalId = t.FestivalId,
+                    Name = t.Name,
+                    Price = t.Price,
+                    Quantity = t.Quantity,
+                    Type = t.Type
+                }).ToList();
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"Error occured while trying to get user {userId} tickets: {e.Message}");
+            }
+        }
+        public async Task DeleteUserBookingAsync(int userId, int ticketId)
+        {
+            await _userRepo.DeleteUserBookingAsync(userId, ticketId);
+        }
     }
 }

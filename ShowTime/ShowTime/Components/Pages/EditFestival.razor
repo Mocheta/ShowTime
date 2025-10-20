@@ -3,7 +3,9 @@
 @using ShowTime.BusinessLogic.Dtos
 @inject IFestivalService FestivalService
 @inject IArtistService? ArtistService
+@inject ITicketService TicketService
 @inject NavigationManager Navigation
+@using ShowTime.Components
 @rendermode InteractiveServer
 
 <style>
@@ -100,6 +102,49 @@
         padding: 10px;
         background-color: #1b2d1b;
         border-radius: 5px;
+    }
+
+    .tickets-section {
+        background-color: #3d3b6b;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+
+    .ticket-item {
+        background-color: #4a4872;
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .ticket-info {
+        flex: 1;
+    }
+
+    .ticket-name {
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: #20c997;
+    }
+
+    .ticket-details {
+        color: #b8b5ff;
+        font-size: 0.9rem;
+        margin-top: 5px;
+    }
+
+    .ticket-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .btn-small {
+        padding: 6px 12px;
+        font-size: 0.9rem;
     }
 </style>
 
@@ -229,7 +274,76 @@
             </button>
             <button type="button" class="btn btn-secondary ml-2" @onclick="@(() => Navigation.NavigateTo("/festivals"))">Cancel</button>
         </EditForm>
+
+        <!-- Tickets Section -->
+        <div class="tickets-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h4>🎫 Festival Tickets</h4>
+                <button type="button" class="btn btn-success btn-small" @onclick="@(() => OpenAddTicketDialog())">
+                    ➕ Add Ticket
+                </button>
+            </div>
+
+            @if (festivalTickets != null && festivalTickets.Any())
+            {
+                @foreach (var ticket in festivalTickets)
+                {
+                    <div class="ticket-item">
+                        <div class="ticket-info">
+                            <div class="ticket-name">@ticket.Name</div>
+                            <div class="ticket-details">
+                                Type: @ticket.Type | Price: $@ticket.Price | Quantity: @ticket.Quantity
+                            </div>
+                        </div>
+                        <div class="ticket-actions">
+                            <button class="btn btn-sm btn-primary btn-small" @onclick="@(() => ShowEditTicketDialog(ticket))">Edit</button>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p style="color: #b8b5ff; text-align: center;">No tickets added yet. Click "Add Ticket" to create one.</p>
+            }
+        </div>
     }
+
+    <Dialog Title="@(_editingTicketId.HasValue ? "Edit Ticket" : "Add New Ticket")" Opened="_showTicketDialog" CloseButtonClicked="@(() => _showTicketDialog = false)">
+        <BodyContent>
+            <div class="sticky-form">
+                <EditForm Model="NewTicket" OnValidSubmit="SaveTicketAsync" FormName="TicketForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="form-group">
+                        <label>Ticket Name</label>
+                        <InputText @bind-Value="NewTicket.Name" class="form-control" placeholder="Enter ticket name (e.g., Early Bird, VIP, Regular)" />
+                        <ValidationMessage For="@(() => NewTicket.Name)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ticket Type</label>
+                        <InputText @bind-Value="NewTicket.Type" class="form-control" placeholder="Enter ticket type (e.g., General, VIP, Backstage)" />
+                        <ValidationMessage For="@(() => NewTicket.Type)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Price</label>
+                        <InputNumber @bind-Value="NewTicket.Price" class="form-control" placeholder="Enter price" />
+                        <ValidationMessage For="@(() => NewTicket.Price)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Quantity</label>
+                        <InputNumber @bind-Value="NewTicket.Quantity" class="form-control" placeholder="Enter available quantity" />
+                        <ValidationMessage For="@(() => NewTicket.Quantity)" />
+                    </div>
+
+                    <button class="btn">@(_editingTicketId.HasValue ? "Update Ticket" : "Add Ticket")</button>
+                </EditForm>
+            </div>
+        </BodyContent>
+    </Dialog>
 </div>
 
 @code {
@@ -241,6 +355,7 @@
     private IList<ArtistGetDto> availableArtists = new List<ArtistGetDto>();
     private IList<ArtistGetDto> filteredArtists = new List<ArtistGetDto>();
     private List<ArtistGetDto> selectedArtists = new List<ArtistGetDto>();
+    private List<TicketGetDto> festivalTickets = new List<TicketGetDto>();
     private string artistSearchTerm = "";
     private bool isLoadingArtists = true;
     private bool isLoading = true;
@@ -248,11 +363,17 @@
     private string errorMessage = "";
     private string successMessage = "";
 
+    // Ticket-related fields
+    private bool _showTicketDialog;
+    private int? _editingTicketId;
+    private TicketCreateDto NewTicket { get; set; } = new();
+
     protected override async Task OnInitializedAsync()
     {
         await LoadFestival();
         await LoadArtists();
         await LoadFestivalArtists();
+        await LoadTickets();
     }
 
     private async Task LoadFestival()
@@ -327,6 +448,19 @@
         }
     }
 
+    private async Task LoadTickets()
+    {
+        try
+        {
+            festivalTickets = await FestivalService.GetTicketsForFestivalAsync(FestivalId);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading tickets: {ex.Message}");
+        }
+    }
+
     private void FilterArtists(ChangeEventArgs e)
     {
         artistSearchTerm = e.Value?.ToString() ?? "";
@@ -390,6 +524,7 @@
             successMessage = "Festival updated successfully!";
 
             // Wait a moment to show success message, then navigate
+            await Task.Delay(1500);
             Navigation.NavigateTo("/festivals", forceLoad: true);
         }
         catch (Exception ex)
@@ -402,6 +537,56 @@
             isSubmitting = false;
             StateHasChanged();
         }
-        Navigation.NavigateTo("/festivals", forceLoad: true);
+    }
+
+    private void OpenAddTicketDialog()
+    {
+        _editingTicketId = null;
+        NewTicket = new TicketCreateDto { FestivalId = FestivalId };
+        _showTicketDialog = true;
+    }
+
+    private void ShowEditTicketDialog(TicketGetDto ticket)
+    {
+        _editingTicketId = ticket.Id;
+        NewTicket = new TicketCreateDto
+        {
+            FestivalId = FestivalId,
+            Name = ticket.Name,
+            Type = ticket.Type,
+            Price = ticket.Price,
+            Quantity = ticket.Quantity
+        };
+        _showTicketDialog = true;
+    }
+
+    private async Task SaveTicketAsync()
+    {
+        try
+        {
+            if (_editingTicketId.HasValue)
+            {
+                // Update existing ticket
+                await TicketService.UpdateTicketAsync(_editingTicketId.Value, NewTicket);
+                successMessage = "Ticket updated successfully!";
+            }
+            else
+            {
+                // Add new ticket
+                await FestivalService.AddTicketForFestivalAsync(FestivalId, NewTicket);
+                successMessage = "Ticket added successfully!";
+            }
+
+            _showTicketDialog = false;
+            _editingTicketId = null;
+            NewTicket = new TicketCreateDto { FestivalId = FestivalId };
+            await LoadTickets();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving ticket: {ex.Message}");
+            errorMessage = "Failed to save ticket. Please try again.";
+        }
     }
 }

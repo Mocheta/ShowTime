@@ -9,13 +9,9 @@ namespace ShowTime.BusinessLogic.Dtos
 {
     public class BookingGetDto
     {
-        public int UserId { get; set; }
-        public int FestivalId { get; set; }
+        public int Id { get; set; }
         public int TicketId { get; set; }
-        public int quantity { get; set; }
-        public Ticket Ticket { get; set; } = null!;
-        public string Type { get; set; } = string.Empty;
-
+        public int UserId { get; set; }
 
     }
 }

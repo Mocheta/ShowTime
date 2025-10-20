@@ -1,12 +1,486 @@
-﻿@page "/buy-ticket/{FestivalId:int}"
+﻿@page "/festivals/{festivalId:int}"
+@using System.Security.Claims
 @using ShowTime.BusinessLogic.Abstractions
 @using ShowTime.BusinessLogic.Dtos
 @inject IFestivalService FestivalService
+@inject ITicketService TicketService
+@inject IUserService UserService
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
 
-<h3>BuyTicket</h3>
+<PageTitle>Festival Tickets</PageTitle>
+
+<style>
+    body {
+        background-color: #26244d;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 0;
+    }
+
+    .tickets-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .page-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+        .page-header h2 {
+            color: #ffffff;
+            font-weight: bold;
+            margin: 0;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .page-header .festival-info {
+            color: #b8b5ff;
+            font-size: 1.2rem;
+            margin-top: 0.5rem;
+        }
+
+    .back-btn {
+        background: linear-gradient(135deg, #3d3b6b, #4a4872);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 10px 20px;
+        font-size: 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        margin-bottom: 2rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .back-btn:hover {
+            border-color: #20c997;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+
+    .tickets-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    .ticket-card {
+        background: linear-gradient(135deg, #3d3b6b, #4a4872);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        transition: all 0.3s ease;
+        position: relative;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+        .ticket-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 16px 32px rgba(0,0,0,0.4);
+            border-color: rgba(255,255,255,0.2);
+        }
+
+    .ticket-header-section {
+        padding: 1.5rem;
+        background: linear-gradient(135deg, rgba(32, 201, 151, 0.2), rgba(32, 201, 151, 0.05));
+        border-bottom: 2px solid rgba(32, 201, 151, 0.3);
+    }
+
+    .ticket-name {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .ticket-type-badge {
+        display: inline-block;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .ticket-type-general {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        color: white;
+    }
+
+    .ticket-type-vip {
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+        color: #212529;
+    }
+
+    .ticket-type-backstage {
+        background: linear-gradient(45deg, #dc3545, #c82333);
+        color: white;
+    }
+
+    .ticket-details {
+        padding: 1.5rem;
+    }
+
+    .ticket-info {
+        margin-bottom: 1.5rem;
+    }
+
+        .ticket-info p {
+            margin: 0.5rem 0;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #ffffff;
+        }
+
+        .ticket-info strong {
+            color: #20c997;
+            min-width: 90px;
+        }
+
+    .info-icon {
+        width: 16px;
+        height: 16px;
+        fill: #20c997;
+    }
+
+    .price-quantity-section {
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid rgba(255,255,255,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .price-box {
+        text-align: left;
+    }
+
+    .price-label {
+        color: #b8b5ff;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+
+    .price-value {
+        color: #20c997;
+        font-size: 2rem;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .quantity-box {
+        text-align: right;
+    }
+
+    .quantity-label {
+        color: #b8b5ff;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+
+    .quantity-value {
+        color: #ffffff;
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+
+    .ticket-actions {
+        display: flex;
+        gap: 10px;
+        padding: 0 1.5rem 1.5rem 1.5rem;
+    }
+
+    .action-btn {
+        flex: 1;
+        border: none;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .purchase-btn {
+        background: linear-gradient(45deg, #28a745, #20c997);
+    }
+
+        .purchase-btn:hover {
+            background: linear-gradient(45deg, #218838, #1ba085);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+
+    .edit-btn {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+    }
+
+        .edit-btn:hover {
+            background: linear-gradient(45deg, #0056b3, #004085);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+
+    .no-tickets {
+        text-align: center;
+        color: #b8b8b8;
+        font-size: 1.2rem;
+        margin-top: 3rem;
+        padding: 2rem;
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+        .no-tickets h3 {
+            color: #ffffff;
+            margin-bottom: 1rem;
+        }
+
+    .date-range {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .date-separator {
+        color: #20c997;
+        font-weight: bold;
+    }
+
+    .loading {
+        text-align: center;
+        color: #20c997;
+        font-size: 1.2rem;
+        margin-top: 3rem;
+    }
+</style>
+
+<div class="tickets-container">
+    <button class="back-btn" @onclick="@(() => Navigation.NavigateTo("/festivals"))">
+        ← Back to Festivals
+    </button>
+
+    <div class="page-header">
+        <h2>🎫 Available Tickets</h2>
+        @if (Festival != null && !string.IsNullOrEmpty(Festival.Name))
+        {
+            <div class="festival-info">@Festival.Name</div>
+        }
+    </div>
+
+    @if (FestivalTickets == null || !FestivalTickets.Any())
+    {
+        <div class="no-tickets">
+            <h3>🎭 No tickets available</h3>
+            <p>There are currently no tickets for this festival.</p>
+        </div>
+    }
+    else
+    {
+        <div class="tickets-grid">
+            @foreach (var ticket in FestivalTickets.Where(ticket => ticket.Quantity > 0))
+            {
+                <div class="ticket-card">
+                    <div class="ticket-header-section">
+                        <div class="ticket-name">@ticket.Name</div>
+                        <span class="ticket-type-badge ticket-type-@ticket.Type.ToString().ToLower()">
+                            @ticket.Type
+                        </span>
+                    </div>
+
+                    <div class="ticket-details">
+                        <div class="ticket-info">
+                            <p>
+                                <svg class="info-icon" viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                                </svg>
+                                <strong>Event Dates:</strong>
+                                <span class="date-range">
+                                    @Festival.StartDate.ToString("MMM dd, yyyy")
+                                    <span class="date-separator">→</span>
+                                    @Festival.EndDate.ToString("MMM dd, yyyy")
+                                </span>
+                            </p>
+
+                            <p>
+                                <svg class="info-icon" viewBox="0 0 24 24">
+                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                                </svg>
+                                <strong>Location:</strong> @Festival.Location
+                            </p>
+                        </div>
+
+                        <div class="price-quantity-section">
+                            <div class="price-box">
+                                <div class="price-label">Price</div>
+                                <div class="price-value">@ticket.Price.ToString("C")</div>
+                            </div>
+                            <div class="quantity-box">
+                                <div class="quantity-label">Available</div>
+                                <div class="quantity-value">@ticket.Quantity</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ticket-actions">
+                        <button class="action-btn purchase-btn" @onclick="(async () => await HandleBuy(ticket))">
+                            🎟️ Purchase Ticket
+                        </button>
+                        <AuthorizeView Roles="Admin">
+                            <button class="action-btn edit-btn" @onclick="(() => ShowEditDialog(ticket))">
+                                ✏️ Edit Ticket
+                            </button>
+                        </AuthorizeView>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <Dialog Title="Update Ticket" Opened="_showEditDialog" CloseButtonClicked="@(() => _showEditDialog = false)">
+        <BodyContent>
+            <div class="sticky-form">
+                <EditForm Model="EditedTicket" OnValidSubmit="(async () => await SubmitTicketEditAsync(_editedTicketId))">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <div class="form-group">
+                        <label>Ticket Name</label>
+                        <InputText @bind-Value="EditedTicket.Name" class="form-control" />
+                        <ValidationMessage For="@(() => EditedTicket.Name)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ticket Type</label>
+                        <InputText @bind-Value="EditedTicket.Type" class="form-control" placeholder="Enter ticket type" />
+                        <ValidationMessage For="@(() => EditedTicket.Type)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>New Price:</label>
+                        <InputNumber @bind-Value="EditedTicket.Price" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>New Quantity:</label>
+                        <InputNumber @bind-Value="EditedTicket.Quantity" class="form-control" />
+                    </div>
+                    <button class="btn btn-primary">Update Ticket</button>
+                </EditForm>
+            </div>
+        </BodyContent>
+    </Dialog>
+</div>
 
 @code {
-	[Parameter] public int FestivalId { get; set; }
+    private int _festivalId;
+    private int _userId;
+    private bool _showEditDialog;
+    private int _editedTicketId;
+
+    [Parameter] public required int FestivalId { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> Cookies { get; set; } = null!;
+    private List<TicketGetDto> FestivalTickets { get; set; } = [];
+    private TicketCreateDto EditedTicket { get; set; } = new();
+    private FestivalGetDto Festival { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _festivalId = FestivalId;
+            FestivalTickets = await FestivalService.GetTicketsForFestivalAsync(_festivalId);
+            var result = await Cookies;
+            var userEmail = result.User.Claims.FirstOrDefault(u => u.Type == ClaimTypes.Email)?.Value;
+
+            if (userEmail == null)
+            {
+                throw new Exception("Could not retrieve email from cookies");
+            }
+
+            _userId = await UserService.GetUserIdByEmailAsync(userEmail);
+            EditedTicket = new TicketCreateDto()
+            {
+                FestivalId = _festivalId,
+            };
+
+            Festival = await FestivalService.GetFestivalByIdAsync(_festivalId) ?? throw new Exception();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Error initializing page: {e.Message}");
+        }
+    }
+
+    private async Task HandleBuy(TicketGetDto ticket)
+    {
+        try
+        {
+            Console.WriteLine($"🎫 Attempting to book ticket {ticket.Id} for user {_userId}");
+            await UserService.BookTicketAsync(_userId, ticket.Id);
+            Console.WriteLine($"✅ Ticket booked successfully!");
+
+            // Reload tickets to show updated quantity
+            FestivalTickets = await FestivalService.GetTicketsForFestivalAsync(_festivalId);
+            StateHasChanged();
+
+            Console.WriteLine($"📊 Reloaded tickets, navigating to bookings...");
+            // Redirect to bookings page after successful purchase
+            await Task.Delay(500); // Small delay to ensure state is saved
+            Navigation.NavigateTo("/my-bookings");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Failed to book ticket: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        }
+    }
+
+    private async Task SubmitTicketEditAsync(int ticketId)
+    {
+        try
+        {
+            await TicketService.UpdateTicketAsync(_editedTicketId, EditedTicket);
+            _showEditDialog = false;
+            EditedTicket = new TicketCreateDto()
+            {
+                FestivalId = _festivalId
+            };
+            FestivalTickets = await FestivalService.GetTicketsForFestivalAsync(_festivalId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to edit ticket: {ex.Message}");
+        }
+    }
+
+    private void ShowEditDialog(TicketGetDto ticket)
+    {
+        EditedTicket.Name = ticket.Name;
+        EditedTicket.Type = ticket.Type;
+        EditedTicket.Type = ticket.Type;
+        EditedTicket.Price = ticket.Price;
+        EditedTicket.Quantity = ticket.Quantity;
+        _editedTicketId = ticket.Id;
+        _showEditDialog = true;
+    }
 }

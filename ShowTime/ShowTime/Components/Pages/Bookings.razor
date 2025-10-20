@@ -1,109 +1,156 @@
 ﻿@page "/my-bookings"
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
 @using ShowTime.BusinessLogic.Abstractions
 @using ShowTime.BusinessLogic.Dtos
 @inject IFestivalService FestivalService
+@inject IUserService UserService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthStateProvider
 @rendermode InteractiveServer
+
+<PageTitle>My Bookings</PageTitle>
 
 <style>
     body {
         background-color: #26244d;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         margin: 0;
         padding: 0;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
     .bookings-container {
         max-width: 1200px;
         margin: 0 auto;
         padding: 20px;
-        color: white;
     }
 
-    .page-header {
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-
-        .page-header h3 {
-            color: white;
-            font-size: 2.5rem;
+        .bookings-container h2 {
+            text-align: center;
+            color: #ffffff;
             font-weight: bold;
-            margin: 0;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
 
-        .page-header .subtitle {
-            color: #b8b5ff;
-            font-size: 1.1rem;
-            margin-top: 0.5rem;
+    .add-booking-btn {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 12px 24px;
+        font-size: 1.1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        margin-bottom: 2rem;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+        .add-booking-btn:hover {
+            background: linear-gradient(45deg, #218838, #1ba085);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+
+    .filter-section {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 2rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .filter-select {
+        background: linear-gradient(135deg, #3d3b6b, #4a4872);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 10px 20px;
+        font-size: 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+        .filter-select:hover {
+            border-color: #20c997;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #20c997;
         }
 
     .bookings-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        gap: 20px;
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        gap: 2rem;
         margin-top: 2rem;
     }
 
     .booking-card {
-        background: linear-gradient(135deg, #3d3b6b 0%, #4a4872 100%);
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        border: 1px solid #5a5894;
+        background: linear-gradient(135deg, #3d3b6b, #4a4872);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        transition: all 0.3s ease;
+        position: relative;
+        border: 1px solid rgba(255,255,255,0.1);
     }
 
         .booking-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+            transform: translateY(-8px);
+            box-shadow: 0 16px 32px rgba(0,0,0,0.4);
+            border-color: rgba(255,255,255,0.2);
         }
 
-    .festival-name {
-        font-size: 1.4rem;
-        font-weight: bold;
-        color: #fff;
-        margin-bottom: 10px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
+    .booking-image-container {
+        position: relative;
+        height: 200px;
+        overflow: hidden;
     }
 
-    .festival-icon {
-        font-size: 1.5rem;
+    .booking-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
     }
 
-    .booking-details {
-        margin-bottom: 15px;
+    .booking-card:hover .booking-image {
+        transform: scale(1.05);
     }
 
-    .detail-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-        padding: 5px 0;
-    }
-
-    .detail-label {
-        color: #b8b5ff;
-        font-size: 0.9rem;
-    }
-
-    .detail-value {
+    .booking-name-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(transparent, rgba(0,0,0,0.8));
         color: white;
-        font-weight: 500;
+        padding: 20px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
     }
 
-    .booking-status {
-        display: inline-block;
-        padding: 4px 12px;
+    .booking-status-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        padding: 6px 12px;
         border-radius: 20px;
         font-size: 0.8rem;
         font-weight: bold;
         text-transform: uppercase;
+        z-index: 10;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
     .status-confirmed {
@@ -122,124 +169,169 @@
     }
 
     .booking-actions {
+        position: absolute;
+        top: 10px;
+        right: 10px;
         display: flex;
-        gap: 10px;
-        margin-top: 15px;
+        gap: 8px;
+        z-index: 10;
     }
 
-    .btn {
-        padding: 8px 16px;
+    .action-btn {
         border: none;
+        color: white;
+        padding: 8px 10px;
         border-radius: 6px;
         cursor: pointer;
         font-size: 0.9rem;
-        font-weight: 500;
         transition: all 0.3s ease;
-        text-decoration: none;
-        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
-    .btn-primary {
+    .view-btn {
         background-color: #007bff;
-        color: white;
     }
 
-        .btn-primary:hover {
+        .view-btn:hover {
             background-color: #0056b3;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
         }
 
-    .btn-secondary {
-        background-color: #6c757d;
-        color: white;
-    }
-
-        .btn-secondary:hover {
-            background-color: #545b62;
-        }
-
-    .btn-danger {
+    .cancel-btn {
         background-color: #dc3545;
-        color: white;
     }
 
-        .btn-danger:hover {
+        .cancel-btn:hover {
             background-color: #c82333;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
         }
 
-    .empty-state {
-        text-align: center;
-        padding: 60px 20px;
-        color: #b8b5ff;
+    .booking-details {
+        padding: 1.5rem;
+        color: #ffffff;
     }
 
-        .empty-state .icon {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            opacity: 0.6;
+    .booking-info {
+        margin-bottom: 1rem;
+    }
+
+        .booking-info p {
+            margin: 0.5rem 0;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .empty-state h4 {
-            color: white;
-            margin-bottom: 10px;
+        .booking-info strong {
+            color: #20c997;
+            min-width: 100px;
         }
 
-        .empty-state p {
-            margin-bottom: 20px;
-            line-height: 1.6;
-        }
+    .info-icon {
+        width: 16px;
+        height: 16px;
+        fill: #20c997;
+    }
 
-    .filter-section {
+    .date-range {
         display: flex;
-        gap: 15px;
-        margin-bottom: 20px;
+        align-items: center;
+        gap: 8px;
         flex-wrap: wrap;
+    }
+
+    .date-separator {
+        color: #20c997;
+        font-weight: bold;
+    }
+
+    .booking-date-small {
+        font-size: 0.85rem;
+        color: #b8b5ff;
+        margin-bottom: 0.5rem;
+    }
+
+    .no-bookings {
+        text-align: center;
+        color: #b8b8b8;
+        font-size: 1.2rem;
+        margin-top: 3rem;
+        padding: 2rem;
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+        .no-bookings h3 {
+            color: #ffffff;
+            margin-bottom: 1rem;
+        }
+
+        .no-bookings p {
+            margin-bottom: 1.5rem;
+        }
+
+    .browse-btn {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        border: none;
+        color: white;
+        padding: 12px 24px;
+        font-size: 1.1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        text-decoration: none;
+        display: inline-block;
+    }
+
+        .browse-btn:hover {
+            background: linear-gradient(45deg, #0056b3, #004085);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+
+    .ticket-info-section {
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
+        padding: 0.75rem;
+        margin-top: 1rem;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .ticket-details {
+        display: flex;
+        justify-content: space-between;
         align-items: center;
     }
 
-    .filter-select {
-        padding: 8px 12px;
-        border: 1px solid #5a5894;
-        border-radius: 6px;
-        background-color: #4a4872;
-        color: white;
+    .ticket-count {
+        color: #20c997;
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+
+    .ticket-type {
+        color: #ffffff;
         font-size: 0.9rem;
     }
 
-        .filter-select:focus {
-            outline: none;
-            border-color: #007bff;
-        }
-
-    .booking-date {
-        font-size: 0.9rem;
-        color: #b8b5ff;
-        margin-bottom: 10px;
-    }
-
-    @@media (max-width: 768px) {
-        .bookings-grid
-
-    {
-        grid-template-columns: 1fr;
-    }
-
-    .filter-section {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .page-header h3 {
-        font-size: 2rem;
-    }
-
+    .loading {
+        text-align: center;
+        color: #20c997;
+        font-size: 1.2rem;
+        margin-top: 3rem;
     }
 </style>
 
 <div class="bookings-container">
-    <div class="page-header">
-        <h3>🎫 My Bookings</h3>
-        <div class="subtitle">Manage your festival tickets and reservations</div>
-    </div>
+    <h2>🎫 My Bookings</h2>
+    <button class="add-booking-btn" @onclick="@(() => Navigation.NavigateTo("/festivals"))">
+        ➕ Book New Tickets
+    </button>
 
     <div class="filter-section">
         <select class="filter-select">
@@ -255,117 +347,197 @@
             <option value="past">Past Events</option>
         </select>
     </div>
-    
-    <div class="bookings-grid">
-        <!-- Sample booking cards for demonstration -->
-        <div class="booking-card">
-            <div class="festival-name">
-                <span class="festival-icon">🎪</span>
-                Summer Music Festival 2025
-            </div>
-            <div class="booking-date">Booked on: March 15, 2025</div>
-            <div class="booking-details">
-                <div class="detail-row">
-                    <span class="detail-label">Date:</span>
-                    <span class="detail-value">July 20-22, 2025</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Location:</span>
-                    <span class="detail-value">Central Park, NYC</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Tickets:</span>
-                    <span class="detail-value">2x General Admission</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Status:</span>
-                    <span class="booking-status status-confirmed">Confirmed</span>
-                </div>
-            </div>
-            <div class="booking-actions">
-                <button class="btn btn-primary">View Details</button>
-                <button class="btn btn-secondary">Download Ticket</button>
-                <button class="btn btn-danger">Cancel</button>
-            </div>
-        </div>
-		<AuthorizeView Roles="User">
-        <div class="booking-card">
-            <div class="festival-name">
-                <span class="festival-icon">🎵</span>
-                Electronic Dreams Festival
-            </div>
-            <div class="booking-date">Booked on: March 10, 2025</div>
-            <div class="booking-details">
-                <div class="detail-row">
-                    <span class="detail-label">Date:</span>
-                    <span class="detail-value">August 5-7, 2025</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Location:</span>
-                    <span class="detail-value">Miami Beach, FL</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Tickets:</span>
-                    <span class="detail-value">1x VIP Pass</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Status:</span>
-                    <span class="booking-status status-pending">Pending</span>
-                </div>
-            </div>
-            <div class="booking-actions">
-                <button class="btn btn-primary">View Details</button>
-                <button class="btn btn-secondary">Modify</button>
-            </div>
-        </div>
 
-        <div class="booking-card">
-            <div class="festival-name">
-                <span class="festival-icon">🎸</span>
-                Rock & Roll Legends
-            </div>
-            <div class="booking-date">Booked on: February 28, 2025</div>
-            <div class="booking-details">
-                <div class="detail-row">
-                    <span class="detail-label">Date:</span>
-                    <span class="detail-value">June 15-16, 2025</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Location:</span>
-                    <span class="detail-value">Austin, TX</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Tickets:</span>
-                    <span class="detail-value">4x General Admission</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Status:</span>
-                    <span class="booking-status status-confirmed">Confirmed</span>
-                </div>
-            </div>
-            <div class="booking-actions">
-                <button class="btn btn-primary">View Details</button>
-                <button class="btn btn-secondary">Download Ticket</button>
-                <button class="btn btn-danger">Cancel</button>
-            </div>
+    @if (isLoading)
+    {
+        <div class="loading">
+            🎪 Loading bookings...
         </div>
-    </AuthorizeView>
-    </div>
+    }
+    else if (userBookings == null || !userBookings.Any())
+    {
+        <div class="no-bookings">
+            <h3>🎭 No bookings yet</h3>
+            <p>You haven't booked any festival tickets yet.<br>Browse our festivals and book your next adventure!</p>
+            <a href="/festivals" class="browse-btn">Browse Festivals</a>
+        </div>
+    }
+    else
+    {
+        <div class="bookings-grid">
+            @foreach (var booking in userBookings)
+            {
+                var festival = GetFestivalForTicket(booking.TicketId);
+                var ticket = GetTicketById(booking.TicketId);
 
-    <!-- Empty state (uncomment if no bookings) -->
-    <!--
-    <div class="empty-state">
-        <div class="icon">🎫</div>
-        <h4>No bookings yet</h4>
-        <p>You haven't booked any festival tickets yet.<br>Browse our festivals and book your next adventure!</p>
-        <a href="/festivals" class="btn btn-primary">Browse Festivals</a>
-    </div>
-    -->
+                if (festival != null && ticket != null)
+                {
+                    <div class="booking-card">
+                        <div class="booking-status-badge status-confirmed">Confirmed</div>
+                        <div class="booking-actions">
+                            <button class="action-btn view-btn" @onclick="@(() => Navigation.NavigateTo($"/festivals/{festival.Id}/tickets"))">View</button>
+                            <button class="action-btn cancel-btn" @onclick="@(() => CancelBooking(booking.Id, booking.TicketId))">Cancel</button>
+                        </div>
+
+                        <div class="booking-image-container">
+                            <img src="@festival.SplashArt" alt="@festival.Name" class="booking-image" />
+                            <div class="booking-name-overlay">@festival.Name</div>
+                        </div>
+
+                        <div class="booking-details">
+                            <div class="booking-date-small">Booked on: @DateTime.Now.ToString("MMMM dd, yyyy")</div>
+                            <div class="booking-info">
+                                <p>
+                                    <svg class="info-icon" viewBox="0 0 24 24">
+                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                                    </svg>
+                                    <strong>Event Dates:</strong>
+                                    <span class="date-range">
+                                        @festival.StartDate.ToString("MMM dd, yyyy")
+                                        <span class="date-separator">→</span>
+                                        @festival.EndDate.ToString("MMM dd, yyyy")
+                                    </span>
+                                </p>
+
+                                <p>
+                                    <svg class="info-icon" viewBox="0 0 24 24">
+                                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                                    </svg>
+                                    <strong>Location:</strong> @festival.Location
+                                </p>
+                            </div>
+
+                            <div class="ticket-info-section">
+                                <div class="ticket-details">
+                                    <span class="ticket-type">@ticket.Name - @ticket.Type</span>
+                                    <span class="ticket-count">$@ticket.Price</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    }
 </div>
 
 @code {
-    // Add your booking logic here
-    // private List<BookingDto> bookings = new List<BookingDto>();
-    // private string selectedStatus = "";
-    // private string selectedTimeFilter = "";
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    private List<BookingGetDto> userBookings = new List<BookingGetDto>();
+    private List<TicketGetDto> userTickets = new List<TicketGetDto>();
+    private Dictionary<int, FestivalGetDto> festivalCache = new Dictionary<int, FestivalGetDto>();
+    private bool isLoading = true;
+    private int userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserBookings();
+    }
+
+    private async Task LoadUserBookings()
+    {
+        try
+        {
+            isLoading = true;
+
+            if (AuthenticationState == null)
+            {
+                Console.WriteLine("AuthenticationState is null");
+                isLoading = false;
+                StateHasChanged();
+                return;
+            }
+
+            var authState = await AuthenticationState;
+            var user = authState.User;
+
+            // Debug: Print all claims
+            Console.WriteLine("=== Available Claims ===");
+            foreach (var claim in user.Claims)
+            {
+                Console.WriteLine($"{claim.Type}: {claim.Value}");
+            }
+            Console.WriteLine("=======================");
+
+            // Try to get email from claims
+            var userEmail = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value
+                         ?? user.Claims.FirstOrDefault(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value
+                         ?? user.Identity?.Name;
+
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                Console.WriteLine("User email not found in claims");
+                isLoading = false;
+                StateHasChanged();
+                return;
+            }
+
+            Console.WriteLine($"Found user email: {userEmail}");
+            userId = await UserService.GetUserIdByEmailAsync(userEmail);
+            Console.WriteLine($"Found user ID: {userId}");
+
+            // Load user bookings and tickets
+            userBookings = await UserService.GetUserBookings(userId);
+            Console.WriteLine($"Loaded {userBookings.Count} bookings");
+
+            userTickets = await UserService.GetUserTickets(userId);
+            Console.WriteLine($"Loaded {userTickets.Count} tickets");
+
+            // Load festivals for all tickets
+            foreach (var ticket in userTickets)
+            {
+                if (!festivalCache.ContainsKey(ticket.FestivalId))
+                {
+                    var festival = await FestivalService.GetFestivalByIdAsync(ticket.FestivalId);
+                    if (festival != null)
+                    {
+                        festivalCache[ticket.FestivalId] = festival;
+                    }
+                }
+            }
+
+            isLoading = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading bookings: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private FestivalGetDto? GetFestivalForTicket(int ticketId)
+    {
+        var ticket = userTickets.FirstOrDefault(t => t.Id == ticketId);
+        if (ticket != null && festivalCache.ContainsKey(ticket.FestivalId))
+        {
+            return festivalCache[ticket.FestivalId];
+        }
+        return null;
+    }
+
+    private TicketGetDto? GetTicketById(int ticketId)
+    {
+        return userTickets.FirstOrDefault(t => t.Id == ticketId);
+    }
+
+    private async Task CancelBooking(int bookingId, int ticketId)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to cancel this booking?"))
+        {
+            try
+            {
+                await UserService.DeleteUserBookingAsync(userId, ticketId);
+                await LoadUserBookings();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error canceling booking: {ex.Message}");
+            }
+        }
+    }
 }

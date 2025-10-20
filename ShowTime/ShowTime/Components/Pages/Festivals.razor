@@ -322,7 +322,7 @@
                     <div class="festival-actions">
                         <button class="action-btn edit-btn" @onclick="@(() => Navigation.NavigateTo($"/edit-festival/{festival.Id}"))">Edit</button>
                         <button class="action-btn delete-btn" @onclick="@(() => DeleteFestival(festival.Id))">Delete</button>
-                        <button class="action-btn edit-btn" @onclick="@(() => Navigation.NavigateTo($"/buy-ticket/{festival.Id}"))">Buy Ticket</button>
+                        <button class="action-btn edit-btn" @onclick="@(() => Navigation.NavigateTo($"/festivals/{festival.Id}"))">Buy Ticket</button>
                     </div>
 
                     <div class="festival-image-container">

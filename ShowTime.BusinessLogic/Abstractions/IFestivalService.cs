@@ -18,5 +18,7 @@ namespace ShowTime.BusinessLogic.Abstractions
         Task<IList<LineupGetDto>> GetFestivalLineupsAsync(int id);
         Task UpdateFestivalArtistsAsync(int festivalId, IList<ArtistGetDto> artists);
         Task AddFestivalLineupAsync(int festivalId, LineupCreateDto lineup);
+        Task AddTicketForFestivalAsync(int festivalId, TicketCreateDto ticketDto);
+        Task<List<TicketGetDto>> GetTicketsForFestivalAsync(int festivalId);
     }
 }

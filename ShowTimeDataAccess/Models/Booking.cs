@@ -8,6 +8,7 @@ namespace ShowTime.DataAccess.Models
 {
     public class Booking
     {
+        public int Id { get; set; }
         public int FestivalId { get; set; }
         public int UserId { get; set; }
         public string type { get; set; } = string.Empty; 

@@ -74,6 +74,23 @@ namespace ShowTime.DataAccess.Repositories.Implementations
 
 
         }
+        public async Task AddTicketAsync(int festivalId, Ticket ticket)
+        {
+            var festival = await GetByIdAsync(festivalId);
+            if (festival != null)
+            {
+                festival.Tickets.Add(ticket);
+                await UpdateAsync(festival);
+            }
+        }
+        public async Task<List<Ticket>> GetFestivalTicketsAsync(int festivalId)
+        {
+            var festival = await _festivals
+                .Include(f => f.Tickets)
+                .FirstOrDefaultAsync(f => f.Id == festivalId);
+            return festival?.Tickets.ToList() ?? new List<Ticket>();
+        }
+        
     }
 
 }

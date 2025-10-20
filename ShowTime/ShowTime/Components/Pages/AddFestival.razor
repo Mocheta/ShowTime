@@ -5,11 +5,13 @@
 @inject IFestivalService FestivalService
 @inject NavigationManager Navigation
 @inject IArtistService ArtistService
+@inject ITicketService TicketService
+@using ShowTime.Components
 @rendermode InteractiveServer
 
 <style>
     body {
-        background-color: #26244d;
+        background-color: #26244d; 
     }
 
     .add-festival-container {
@@ -208,6 +210,57 @@
         </button>
         <button type="button" class="btn btn-secondary ml-2" @onclick="@(() => Navigation.NavigateTo("/festivals"))">Cancel</button>
     </EditForm>
+
+    @if (festivalCreated)
+    {
+        <div class="artists-section" style="margin-top: 20px;">
+            <h4>🎫 Add Tickets (Optional)</h4>
+            <p style="color: #b8b5ff;">Your festival has been created! You can now add tickets or finish.</p>
+            <button type="button" class="btn btn-success" @onclick="@(() => _showTicketDialog = true)">
+                ➕ Add Ticket
+            </button>
+            <button type="button" class="btn btn-primary ml-2" @onclick="@(() => Navigation.NavigateTo("/festivals"))">
+                ✅ Finish & View Festivals
+            </button>
+        </div>
+    }
+
+    <Dialog Title="Add New Ticket" Opened="_showTicketDialog" CloseButtonClicked="@(() => _showTicketDialog = false)">
+        <BodyContent>
+            <div class="sticky-form">
+                <EditForm Model="NewTicket" OnValidSubmit="AddTicketAsync" FormName="AddTicketForm">
+                    <DataAnnotationsValidator/>
+                    <ValidationSummary/>
+                    
+                    <div class="form-group">
+                        <label>Ticket Name</label>
+                        <InputText @bind-Value="NewTicket.Name" class="form-control" placeholder="Enter ticket name (e.g., Early Bird, VIP, Regular)"/>
+                        <ValidationMessage For="@(() => NewTicket.Name)"/>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Ticket Type</label>
+                        <InputText @bind-Value="NewTicket.Type" class="form-control" placeholder="Enter ticket type (e.g., General, VIP, Backstage)"/>
+                        <ValidationMessage For="@(() => NewTicket.Type)"/>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Price</label>
+                        <InputNumber @bind-Value="NewTicket.Price" class="form-control" placeholder="Enter price"/>
+                        <ValidationMessage For="@(() => NewTicket.Price)"/>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Quantity</label>
+                        <InputNumber @bind-Value="NewTicket.Quantity" class="form-control" placeholder="Enter available quantity"/>
+                        <ValidationMessage For="@(() => NewTicket.Quantity)"/>
+                    </div>
+                    
+                    <button class="btn">Add Ticket</button>
+                </EditForm>
+            </div>
+        </BodyContent>
+    </Dialog>
 </div>
 
 @code {
@@ -222,6 +275,12 @@
     private bool isSubmitting = false;
     private string errorMessage = "";
     private string successMessage = "";
+    private bool festivalCreated = false;
+
+    // Ticket-related fields
+    private bool _showTicketDialog;
+    private int _festivalId;
+    private TicketCreateDto NewTicket { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -304,31 +363,31 @@
             // First, create the festival
             await FestivalService.AddFestivalAsync(newFestival);
 
-            // If artists were selected, we need to get the created festival's ID
-            // Since AddFestivalAsync doesn't return the created festival, we'll need to find it
-            // This is a limitation of the current service design
-            if (selectedArtists.Any())
-            {
-                // Get all festivals and find the one we just created
-                // This is not ideal but works with the current service structure
-                var allFestivals = await FestivalService.GetAllFestivalsAsync();
-                var createdFestival = allFestivals
-                    .Where(f => f.Name == newFestival.Name && f.Location == newFestival.Location)
-                    .OrderByDescending(f => f.Id)
-                    .FirstOrDefault();
+            // Get all festivals and find the one we just created
+            var allFestivals = await FestivalService.GetAllFestivalsAsync();
+            var createdFestival = allFestivals
+                .Where(f => f.Name == newFestival.Name && f.Location == newFestival.Location)
+                .OrderByDescending(f => f.Id)
+                .FirstOrDefault();
 
-                if (createdFestival != null)
+            if (createdFestival != null)
+            {
+                // Store the festival ID for ticket creation
+                _festivalId = createdFestival.Id;
+                NewTicket = new TicketCreateDto { FestivalId = _festivalId };
+
+                // Update the festival with the selected artists if any
+                if (selectedArtists.Any())
                 {
-                    // Update the festival with the selected artists
                     await FestivalService.UpdateFestivalArtistsAsync(createdFestival.Id, selectedArtists);
                 }
             }
 
             successMessage = "Festival added successfully!";
+            festivalCreated = true;
 
-            // Wait a moment to show success message, then navigate
-            await Task.Delay(1500);
-            Navigation.NavigateTo("/festivals");
+            // Don't auto-navigate, let user add tickets if they want
+            StateHasChanged();
         }
         catch (Exception ex)
         {
@@ -339,6 +398,23 @@
         {
             isSubmitting = false;
             StateHasChanged();
+        }
+    }
+
+    private async Task AddTicketAsync()
+    {
+        try
+        {
+            await FestivalService.AddTicketForFestivalAsync(_festivalId, NewTicket);
+            NewTicket = new TicketCreateDto { FestivalId = _festivalId };
+            _showTicketDialog = false;
+            successMessage = "Ticket added successfully! You can add more or finish.";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error adding ticket: {ex.Message}");
+            errorMessage = "Failed to add ticket. Please try again.";
         }
     }
 }

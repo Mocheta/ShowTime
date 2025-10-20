@@ -47,30 +47,106 @@ namespace ShowTime.DataAccess.Repositories.Implementations
         }
         public async Task<IList<Booking>> GetBookingsByUserIdAsync(int userId)
         {
-            return await _users
-                .Where(u => u.Id == userId)
-                .SelectMany(u => u.Bookings)
-                .ToListAsync();
+            try
+            {
+                return await _context
+                    .Set<Booking>()
+                    .Where(b => b.UserId == userId)
+                    .Include(b => b.Ticket)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Unable to retrieve bookings for user ID {userId}: {ex.Message}");
+            }
         }
+
         public async Task<IList<Ticket>> GetTicketsByUserIdAsync(int userId)
         {
-            return await _users
-                .Where(u => u.Id == userId)
-                .SelectMany(u => u.Tickets)
-                .ToListAsync();
+            try
+            {
+                return await _context
+                    .Set<Booking>()
+                    .Where(b => b.UserId == userId)
+                    .Select(b => b.Ticket)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Unable to retrieve tickets for user ID {userId}: {ex.Message}");
+            }
         }
-        public async Task DeleteUserBookingsAsync(int userId)
+        public async Task DeleteUserBookingAsync(int userId, int ticketId)
         {
-            var user = await _users.Include(u => u.Bookings).FirstOrDefaultAsync(u => u.Id == userId);
-            if (user != null)
+            try
             {
-                _context.Bookings.RemoveRange(user.Bookings);
-                await _context.SaveChangesAsync();
+                var bookings = await _context
+                    .Set<Booking>()
+                    .Include(b => b.Ticket)
+                    .Where(b => b.UserId == userId && b.TicketId == ticketId)
+                    .FirstOrDefaultAsync();
+
+                if (bookings != null)
+                {
+                    bookings.Ticket.Quantity += 1;
+                    _context.Set<Booking>().Remove(bookings);
+                    await _context.SaveChangesAsync();
+                }
             }
-            else
+            catch (Exception e)
             {
-                throw new Exception($"User with ID {userId} not found.");
+                throw new Exception($"Error trying to delete user booking with ID {userId}: {e.Message}");
             }
         }
+        public async Task BookTicketAsync(int userId, int ticketId)
+        {
+            try
+            {
+                var ticket = await _context
+                    .Set<Ticket>()
+                    .FirstOrDefaultAsync(t => t.Id == ticketId);
+
+                if (ticket == null || ticket.Quantity <= 0)
+                {
+                    throw new Exception("Ticket not available");
+                }
+
+                var booking = new Booking
+                {
+                    UserId = userId,
+                    TicketId = ticketId,
+                    FestivalId = ticket.FestivalId  // ADD THIS LINE!
+                };
+
+                ticket.Quantity -= 1;
+                await _context.Set<Booking>().AddAsync(booking);
+                await _context.SaveChangesAsync();
+
+                Console.WriteLine($"✅ Booking created: UserId={userId}, TicketId={ticketId}, FestivalId={ticket.FestivalId}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"❌ Error booking ticket: {e.Message}");
+                throw new Exception($"Error trying to book ticket with ID {ticketId} for user ID {userId}: {e.Message}");
+            }
+        }
+        public async Task<int> GetUserIdByEmailAsync(string? email)
+        {
+            try
+            {
+                var user = await _users
+                    .FirstOrDefaultAsync(u => u.Email == email);
+                if (user == null)
+                {
+                    throw new Exception("User not found");
+                }
+                return user.Id;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Unable to retrieve user ID with email {email}: {ex.Message}");
+            }
+        }
+
     }
 }

@@ -13,12 +13,14 @@ namespace ShowTime.BusinessLogic.Services
 {
     public class FestivalService : IFestivalService
     {
-        private readonly IRepo<Festival> _festivalRepository;
+        private readonly IFestivalRepo _festivalRepository;
         private readonly IRepo<Artist> _artistRepository;
-        public FestivalService(IRepo<Festival> festivalRepository, IRepo<Artist> artistRepository)
+        private readonly IRepo<Ticket> _ticketRepository;
+        public FestivalService(IFestivalRepo festivalRepository, IRepo<Artist> artistRepository, IRepo<Ticket> ticketRepository)
         {
             _festivalRepository = festivalRepository ?? throw new ArgumentNullException(nameof(festivalRepository));
             _artistRepository = artistRepository ?? throw new ArgumentNullException(nameof(artistRepository));
+            _ticketRepository = ticketRepository ?? throw new ArgumentNullException(nameof(ticketRepository));
         }
 
         public async Task<FestivalGetDto> GetFestivalByIdAsync(int id)
@@ -268,6 +270,45 @@ namespace ShowTime.BusinessLogic.Services
             {
                 Console.WriteLine($"Error adding lineup for festival ID {festivalId}: {ex.Message}");
                 throw new InvalidOperationException("An unexpected error occurred while adding the festival lineup", ex);
+            }
+        }
+        public async Task AddTicketForFestivalAsync(int festivalId, TicketCreateDto ticketDto)
+        {
+            try
+            {
+                var ticket = new Ticket()
+                {
+                    FestivalId = festivalId,
+                    Name = ticketDto.Name,
+                    Type = ticketDto.Type,
+                    Price = ticketDto.Price,
+                    Quantity = ticketDto.Quantity,
+                };
+                await _festivalRepository.AddTicketAsync(festivalId, ticket);
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"Error while trying to add new ticket for festival with Id: {festivalId}: {e.Message}");
+            }
+        }
+        public async Task<List<TicketGetDto>> GetTicketsForFestivalAsync(int festivalId)
+        {
+            try
+            {
+                var tickets = await _festivalRepository.GetFestivalTicketsAsync(festivalId);
+                return tickets.Select(t => new TicketGetDto
+                {
+                    FestivalId = festivalId,
+                    Name = t.Name,
+                    Type = t.Type,
+                    Price = t.Price,
+                    Quantity = t.Quantity,
+                    Id = t.Id
+                }).ToList();
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"Error trying to retrieve tickets for festival with id: {festivalId}: {e.Message}");
             }
         }
 

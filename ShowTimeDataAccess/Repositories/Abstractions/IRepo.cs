@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ShowTime.DataAccess.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,5 +14,6 @@ namespace ShowTime.DataAccess.Repositories.Abstractions
         Task DeleteAsync(int id);
         Task<T?> GetByIdAsync(int id);
         Task<IEnumerable<T>> GetAllAsync();
+        
     }
 }

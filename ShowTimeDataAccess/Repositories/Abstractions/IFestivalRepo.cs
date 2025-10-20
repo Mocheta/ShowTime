@@ -14,6 +14,8 @@ namespace ShowTime.DataAccess.Repositories.Abstractions
         Task<ICollection<Ticket>> GetTicketsByFestivalIdAsync(int festivalId);
         Task UpdateFestivalArtistsAsync(int festivalId, ICollection<Artist> artists);
         Task UpdateFestivalLineupsAsync(int festivalId, ICollection<Lineup> lineups);
-        
+        Task AddTicketAsync(int festivalId, Ticket ticket);
+        Task<List<Ticket>> GetFestivalTicketsAsync(int festivalId);
+
     }
 }
