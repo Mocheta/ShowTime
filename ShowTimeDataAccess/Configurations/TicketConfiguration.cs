@@ -24,8 +24,9 @@ namespace ShowTime.DataAccess.Configurations
             builder.Property(t => t.Quantity)
                 .IsRequired();
 
-            builder.HasOne(t => t.Booking)
-                .WithOne(b => b.Ticket);
+            builder.HasMany(t => t.Bookings)  // Change to HasMany
+                    .WithOne(b => b.Ticket)
+                    .HasForeignKey(b => b.TicketId);
 
             builder.HasOne(t => t.Festival)
                 .WithMany(f => f.Tickets)

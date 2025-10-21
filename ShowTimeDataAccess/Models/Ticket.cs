@@ -15,6 +15,6 @@ namespace ShowTime.DataAccess.Models
         public int FestivalId { get; set; }
         public int Quantity { get; set; }
         public Festival Festival { get; set; } = null!;
-        public Booking Booking { get; set; } = null!;
+        public ICollection<Booking> Bookings { get; set; }
     }
 }

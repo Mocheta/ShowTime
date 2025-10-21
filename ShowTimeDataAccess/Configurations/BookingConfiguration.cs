@@ -14,12 +14,12 @@ namespace ShowTime.DataAccess.Configurations
         public void Configure(EntityTypeBuilder<Booking> builder)
         {
             builder.ToTable("Bookings");
-            builder.HasKey(b => new { b.FestivalId, b.UserId });
+            builder.HasKey(b => b.Id); // Correct - single auto-increment key
             builder.Property(b => b.type)
                 .IsRequired()
                 .HasMaxLength(50);
             builder.HasOne(b => b.Ticket)
-                .WithOne(t => t.Booking)
+                .WithMany(t => t.Bookings)
                 .OnDelete(DeleteBehavior.NoAction); // Assuming you want to delete Booking when Ticket is deleted
 
             // Assuming Festival and User are configured elsewhere

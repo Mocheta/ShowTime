@@ -375,7 +375,7 @@
                     <div class="booking-card">
                         <div class="booking-status-badge status-confirmed">Confirmed</div>
                         <div class="booking-actions">
-                            <button class="action-btn view-btn" @onclick="@(() => Navigation.NavigateTo($"/festivals/{festival.Id}/tickets"))">View</button>
+                            <button class="action-btn view-btn" @onclick="@(() => Navigation.NavigateTo($"/festivals/{festival.Id}"))">View</button>
                             <button class="action-btn cancel-btn" @onclick="@(() => CancelBooking(booking.Id, booking.TicketId))">Cancel</button>
                         </div>
 

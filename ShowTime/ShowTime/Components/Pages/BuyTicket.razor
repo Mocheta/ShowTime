@@ -1,11 +1,13 @@
 ﻿@page "/festivals/{festivalId:int}"
 @using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
 @using ShowTime.BusinessLogic.Abstractions
 @using ShowTime.BusinessLogic.Dtos
 @inject IFestivalService FestivalService
 @inject ITicketService TicketService
 @inject IUserService UserService
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
 @rendermode InteractiveServer
 
 <PageTitle>Festival Tickets</PageTitle>
@@ -161,9 +163,13 @@
         padding: 1rem;
         margin-bottom: 1.5rem;
         border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .price-quantity-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        margin-bottom: 1rem;
     }
 
     .price-box {
@@ -199,6 +205,57 @@
         color: #ffffff;
         font-size: 1.5rem;
         font-weight: bold;
+    }
+
+    .quantity-selector {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+
+    .quantity-btn {
+        background: linear-gradient(45deg, #3d3b6b, #4a4872);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1.5rem;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .quantity-btn:hover:not(:disabled) {
+            background: linear-gradient(45deg, #20c997, #1ba085);
+            border-color: #20c997;
+            transform: scale(1.1);
+        }
+
+        .quantity-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+    .quantity-display {
+        color: #20c997;
+        font-size: 1.8rem;
+        font-weight: bold;
+        min-width: 50px;
+        text-align: center;
+    }
+
+    .purchase-label {
+        color: #b8b5ff;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+        text-align: center;
     }
 
     .ticket-actions {
@@ -332,13 +389,31 @@
                         </div>
 
                         <div class="price-quantity-section">
-                            <div class="price-box">
-                                <div class="price-label">Price</div>
-                                <div class="price-value">@ticket.Price.ToString("C")</div>
+                            <div class="price-quantity-row">
+                                <div class="price-box">
+                                    <div class="price-label">Price per ticket</div>
+                                    <div class="price-value">@ticket.Price.ToString("C")</div>
+                                </div>
+                                <div class="quantity-box">
+                                    <div class="quantity-label">Available</div>
+                                    <div class="quantity-value">@ticket.Quantity</div>
+                                </div>
                             </div>
-                            <div class="quantity-box">
-                                <div class="quantity-label">Available</div>
-                                <div class="quantity-value">@ticket.Quantity</div>
+
+                            <div>
+                                <div class="purchase-label">Select Quantity</div>
+                                <div class="quantity-selector">
+                                    <button class="quantity-btn" @onclick="@(() => DecreaseQuantity(ticket.Id))" disabled="@(GetSelectedQuantity(ticket.Id) <= 1)">
+                                        −
+                                    </button>
+                                    <div class="quantity-display">@GetSelectedQuantity(ticket.Id)</div>
+                                    <button class="quantity-btn" @onclick="@(() => IncreaseQuantity(ticket.Id))" disabled="@(GetSelectedQuantity(ticket.Id) >= ticket.Quantity)">
+                                        +
+                                    </button>
+                                </div>
+                                <div style="text-align: center; margin-top: 0.5rem; color: #20c997; font-weight: bold; font-size: 1.2rem;">
+                                    Total: @((ticket.Price * GetSelectedQuantity(ticket.Id)).ToString("C"))
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -402,6 +477,7 @@
     private List<TicketGetDto> FestivalTickets { get; set; } = [];
     private TicketCreateDto EditedTicket { get; set; } = new();
     private FestivalGetDto Festival { get; set; } = new();
+    private Dictionary<int, int> selectedQuantities = new Dictionary<int, int>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -409,25 +485,56 @@
         {
             _festivalId = FestivalId;
             FestivalTickets = await FestivalService.GetTicketsForFestivalAsync(_festivalId);
-            var result = await Cookies;
-            var userEmail = result.User.Claims.FirstOrDefault(u => u.Type == ClaimTypes.Email)?.Value;
 
-            if (userEmail == null)
+            Console.WriteLine("=== Tickets Page Initialization ===");
+
+            // Get authentication state
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            // Print all claims for debugging
+            Console.WriteLine("Available claims:");
+            foreach (var claim in user.Claims)
             {
-                throw new Exception("Could not retrieve email from cookies");
+                Console.WriteLine($"  {claim.Type}: {claim.Value}");
             }
 
-            _userId = await UserService.GetUserIdByEmailAsync(userEmail);
-            EditedTicket = new TicketCreateDto()
-            {
-                FestivalId = _festivalId,
-            };
+            // Get userId from NameIdentifier claim
+            var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            Console.WriteLine($"UserId Claim: {userIdClaim}");
 
+            if (!string.IsNullOrWhiteSpace(userIdClaim) && int.TryParse(userIdClaim, out _userId))
+            {
+                Console.WriteLine($"✅ User ID from NameIdentifier: {_userId}");
+            }
+            else
+            {
+                Console.WriteLine("⚠️ NameIdentifier not found, trying email...");
+
+                // Fallback: get email and look up user
+                var userEmail = user.FindFirst(ClaimTypes.Name)?.Value;
+                Console.WriteLine($"Email from Name claim: {userEmail}");
+
+                if (!string.IsNullOrEmpty(userEmail))
+                {
+                    _userId = await UserService.GetUserIdByEmailAsync(userEmail);
+                    Console.WriteLine($"✅ User ID from email lookup: {_userId}");
+                }
+                else
+                {
+                    Console.WriteLine("❌ Could not get user ID!");
+                }
+            }
+
+            EditedTicket = new TicketCreateDto() { FestivalId = _festivalId };
             Festival = await FestivalService.GetFestivalByIdAsync(_festivalId) ?? throw new Exception();
+            Console.WriteLine($"Festival loaded: {Festival.Name}");
+            Console.WriteLine("===================================");
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Error initializing page: {e.Message}");
+            Console.WriteLine($"❌ Error: {e.Message}");
+            throw;  // Remove the generic error message
         }
     }
 
@@ -435,9 +542,19 @@
     {
         try
         {
-            Console.WriteLine($"🎫 Attempting to book ticket {ticket.Id} for user {_userId}");
-            await UserService.BookTicketAsync(_userId, ticket.Id);
-            Console.WriteLine($"✅ Ticket booked successfully!");
+            int quantity = GetSelectedQuantity(ticket.Id);
+            Console.WriteLine($"🎫 Attempting to book {quantity}x ticket {ticket.Id} for user {_userId}");
+
+            // Book multiple tickets
+            for (int i = 0; i < quantity; i++)
+            {
+                await UserService.BookTicketAsync(_userId, ticket.Id);
+            }
+
+            Console.WriteLine($"✅ {quantity} ticket(s) booked successfully!");
+
+            // Reset quantity selector for this ticket
+            selectedQuantities[ticket.Id] = 1;
 
             // Reload tickets to show updated quantity
             FestivalTickets = await FestivalService.GetTicketsForFestivalAsync(_festivalId);
@@ -445,13 +562,41 @@
 
             Console.WriteLine($"📊 Reloaded tickets, navigating to bookings...");
             // Redirect to bookings page after successful purchase
-            await Task.Delay(500); // Small delay to ensure state is saved
+            await Task.Delay(500);
             Navigation.NavigateTo("/my-bookings");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"❌ Failed to book ticket: {ex.Message}");
             Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        }
+    }
+
+    private int GetSelectedQuantity(int ticketId)
+    {
+        if (!selectedQuantities.ContainsKey(ticketId))
+        {
+            selectedQuantities[ticketId] = 1;
+        }
+        return selectedQuantities[ticketId];
+    }
+
+    private void IncreaseQuantity(int ticketId)
+    {
+        var ticket = FestivalTickets.FirstOrDefault(t => t.Id == ticketId);
+        if (ticket != null && GetSelectedQuantity(ticketId) < ticket.Quantity)
+        {
+            selectedQuantities[ticketId] = GetSelectedQuantity(ticketId) + 1;
+            StateHasChanged();
+        }
+    }
+
+    private void DecreaseQuantity(int ticketId)
+    {
+        if (GetSelectedQuantity(ticketId) > 1)
+        {
+            selectedQuantities[ticketId] = GetSelectedQuantity(ticketId) - 1;
+            StateHasChanged();
         }
     }
 

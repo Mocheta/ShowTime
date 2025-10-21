@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ShowTime.DataAccess;
 
@@ -11,9 +12,11 @@ using ShowTime.DataAccess;
 namespace ShowTime.DataAccess.Migrations
 {
     [DbContext(typeof(ShowTimeDBContext))]
-    partial class ShowTimeDBContextModelSnapshot : ModelSnapshot
+    [Migration("20251021113612_books")]
+    partial class books
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -50,19 +53,16 @@ namespace ShowTime.DataAccess.Migrations
 
             modelBuilder.Entity("ShowTime.DataAccess.Models.Booking", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
                     b.Property<int>("FestivalId")
                         .HasColumnType("int");
 
-                    b.Property<int>("TicketId")
+                    b.Property<int>("UserId")
                         .HasColumnType("int");
 
-                    b.Property<int>("UserId")
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TicketId")
                         .HasColumnType("int");
 
                     b.Property<string>("type")
@@ -70,9 +70,7 @@ namespace ShowTime.DataAccess.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.HasKey("Id");
-
-                    b.HasIndex("FestivalId");
+                    b.HasKey("FestivalId", "UserId");
 
                     b.HasIndex("TicketId");
 
