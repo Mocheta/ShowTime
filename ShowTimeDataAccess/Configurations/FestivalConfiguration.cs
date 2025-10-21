@@ -32,6 +32,14 @@ namespace ShowTime.DataAccess.Configurations
             builder.Property(f => f.capacity)
                 .IsRequired();
 
+            builder.HasMany(f => f.Tickets)
+                .WithOne(t => t.Festival)
+                .HasForeignKey(t => t.FestivalId)
+                .OnDelete(DeleteBehavior.Cascade);
+            builder.HasMany(f => f.Lineups)
+                .WithOne(l => l.Festival)
+                .HasForeignKey(l => l.FestivalId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

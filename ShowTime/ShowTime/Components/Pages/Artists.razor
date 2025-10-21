@@ -19,10 +19,25 @@
         margin-bottom: 1.5rem;
     }
 
-    .artists-container .btn-success {
-        display: block;
-        margin: 0 auto 1.5rem auto;
+    .add-artist-btn-container {
+        text-align: center;
+        margin-bottom: 1.5rem;
     }
+
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+        .btn-success:hover {
+            background-color: #218838;
+        }
 
     .search-filter-container {
         max-width: 1200px;
@@ -188,6 +203,25 @@
                 filter: brightness(1.1);
             }
 
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-right: 0.5rem;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
     .no-results {
         text-align: center;
         color: #a0a0c0;
@@ -205,6 +239,13 @@
 
 <div class="artists-container">
     <h2>Artists</h2>
+
+    <!-- Always show Add button -->
+    <div class="add-artist-btn-container">
+        <button class="btn-success" @onclick="@(() => Navigation.NavigateTo("/add-artist"))">
+            Add New Artist
+        </button>
+    </div>
 
     @if (isLoading)
     {
@@ -248,13 +289,6 @@
                     <label class="filter-label">&nbsp;</label>
                     <button class="clear-filters-btn" @onclick="ClearFilters">Clear Filters</button>
                 </div>
-
-                <div class="filter-group" style="margin-left: auto;">
-                    <label class="filter-label">&nbsp;</label>
-                    <button class="btn btn-success" @onclick="@(() => Navigation.NavigateTo("/add-artist"))">
-                        Add New Artist
-                    </button>
-                </div>
             </div>
         </div>
 
@@ -280,10 +314,8 @@
                             </div>
                         </div>
                         <div class="artist-actions">
-                            <AuthorizeView Roles="Admin">
-                                <button class="btn btn-primary me-2" @onclick="@(() => Navigation.NavigateTo($"/edit-artist/{artist.Id}"))">Edit</button>
-                                <button class="btn btn-danger" @onclick="@(() => DeleteArtist(artist.Id))">Delete</button>
-                            </AuthorizeView>
+                            <button class="btn-primary" @onclick="@(() => Navigation.NavigateTo($"/edit-artist/{artist.Id}"))">Edit</button>
+                            <button class="btn-danger" @onclick="@(() => DeleteArtist(artist.Id))">Delete</button>
                         </div>
                     </div>
                 }
@@ -292,7 +324,7 @@
     }
     else
     {
-        <p class="no-results">No artists registered</p>
+        <p class="no-results">No artists registered. Click "Add New Artist" to get started!</p>
     }
 </div>
 
@@ -417,7 +449,7 @@
             {
                 await ArtistService.DeleteArtistAsync(id);
                 await LoadArtists();
-                await ApplyFilters(); // Reapply filters after deletion
+                await ApplyFilters();
             }
             catch (Exception ex)
             {

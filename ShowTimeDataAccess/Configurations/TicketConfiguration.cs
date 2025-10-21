@@ -31,7 +31,7 @@ namespace ShowTime.DataAccess.Configurations
             builder.HasOne(t => t.Festival)
                 .WithMany(f => f.Tickets)
                 .HasForeignKey(t => t.FestivalId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

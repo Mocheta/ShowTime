@@ -11,7 +11,7 @@ namespace ShowTime.DataAccess.Repositories.Implementations
 {
     public class GenericImplement<T> : IRepo<T> where T : class
     {
-        private readonly ShowTimeDBContext _context;
+        protected readonly ShowTimeDBContext _context;
         public GenericImplement(ShowTimeDBContext context)
         {
             _context = context;
